@@ -1,27 +1,31 @@
+require 'rails'
+
 module RouteInterceptor
   module RouteInspector
   
     class << self
-  
-      def engine_paths(engine = route_engine)
-        engine_mounts(engine).transform_keys { |r| r.ast.to_s }
+
+      def anchored_routes(engine = route_engine)
+        journey_routes(engine).anchored_routes
       end
-  
-      def engine_mounts(engine = route_engine)
-        journey_routes(engine).routes.select { |r| r.app.app.is_a?(Class) }.map { |r| [r, r.app.app] }.to_h
-      end
-  
-      def mounted_engines(engine = route_engine)
-        engines = Hash.new { |h, k| h[k] = [] }
-        engine_paths(engine).each { |path, engine| engines[engine] << path }
-        engines
-      end
-  
+
       def cam_from_path(path, http_method = :get, engine = route_engine)
         route = FakeRequest.new(path, http_method, engine).route
         route && "#{route.defaults[:controller]}##{route.defaults[:action]}"
       end
-  
+
+      def custom_routes(engine = route_engine)
+        journey_routes(engine).custom_routes
+      end
+
+      def engine_mounts(engine = route_engine)
+        routes(engine).select { |r| r.app.app.is_a?(Class) }.map { |r| [r, r.app.app] }.to_h
+      end
+
+      def engine_paths(engine = route_engine)
+        engine_mounts(engine).transform_keys { |r| r.ast.to_s }
+      end
+
       def find_route(request, engine = nil)     
         engine ||= route_engine
         original_path, http_method = (request.is_a?(String) ? FakeRequest.new(request, :get) : request).yield_self { |r| [r.path, r.method] }
@@ -33,9 +37,25 @@ module RouteInterceptor
             request = FakeRequest.new(original_path[path.size..-1].sub(/(^[^\/])/, '/\1'), http_method, engine)
             engine.routes.router.send(:find_routes, request).map(&:last).find { |r| r.app.matches?(request) }
           end
-        end.yield_self { |route| route && !route.defaults.empty? ? route : nil }
+        end.yield_self do |route|
+          route && !route.defaults.empty? ? route : nil
+        end
       end
       
+      def journey_routes(engine = route_engine)
+        route_set(engine).set
+      end
+
+      def mounted_engines(engine = route_engine)
+        engines = Hash.new { |h, k| h[k] = [] }
+        engine_paths(engine).each { |path, engine| engines[engine] << path }
+        engines
+      end
+
+      def named_routes(engine = route_engine)
+        route_set(engine).named_routes
+      end
+
       def path_from_cam(cam, engine = route_engine)
         controller_name, controller_method = cam.split('#')
         if controller_name && controller_method
@@ -52,15 +72,7 @@ module RouteInterceptor
           nil
         end
       end
-      
-      def journey_routes(engine = route_engine)
-        route_set(engine).set
-      end
-  
-      def named_routes(engine = route_engine)
-        route_set(engine).named_routes
-      end
-  
+
       def route_engine
         @route_engine ||= Rails.application
       end
@@ -92,14 +104,20 @@ module RouteInterceptor
         rset = route_set(engine)
   
         status, headers, body =  rset.call(Rack::MockRequest.env_for(request.path[rset.find_script_name({}).size..-1], opts))
-        request.controller_instance.response_body = body
-        request.controller_instance.response.status = status
-        request.controller_instance.response.headers.merge(headers)
+        unless status == 404
+          request.controller_instance.response_body = body
+          request.controller_instance.response.status = status
+          request.controller_instance.response.headers.merge(headers)
+        else
+          raise ActionController::RoutingError, "No route matches [#{request.env['REQUEST_METHOD']}] #{request.env['PATH_INFO'].inspect}"
+        end
       end
-  
+      
       def routes(engine = route_engine)
         journey_routes(engine).routes
       end
+      
+      # TODO: need access to custom_routes and anchored_routes
   
       def route_set(engine = route_engine)
         engine.routes
@@ -110,11 +128,27 @@ module RouteInterceptor
       end
   
     end
-  
-    def cam_from_path(path, http_method = :get, engine = route_engine)
-      RouteInspector(path, http_method, engine)
+
+    def anchored_routes(engine = route_engine)
+      RouteInspector.anchored_routes(engine)
     end
-  
+
+    def custom_routes(engine = route_engine)
+      RouteInspector.custom_routes(engine)
+    end
+
+    def cam_from_path(path, http_method = :get, engine = route_engine)
+      RouteInspector.cam_from_path(path, http_method, engine)
+    end
+
+    def engine_mounts(engine = route_engine)
+      RouteInspector.engine_mounts(engine)
+    end
+
+    def engine_paths(engine = route_engine)
+      RouteInspector.engine_paths(engine)
+    end
+
     def find_route(request, engine = route_engine)
       RouteInspector.find_route(request, engine)
     end
@@ -122,7 +156,11 @@ module RouteInterceptor
     def journey_routes(engine = route_engine)
       RouteInspector.journey_routes(engine)
     end
-  
+
+    def mounted_engines(engine = route_engine)
+      RouteInspector.mounted_engines(engine)
+    end
+    
     def named_routes(engine = route_engine)
       RouteInspector.named_routes(engine)
     end
@@ -156,7 +194,7 @@ module RouteInterceptor
     end
   
     def self.included(base)
-      if base.is_a?(Rails::Application) || base.is_a?(Rails::Engine)
+      if base.is_a?(::Rails::Application) || base.is_a?(::Rails::Engine)
         base.route_engine = self
       end
     end

@@ -1,3 +1,5 @@
+require_relative 'route_inspector'
+
 module RouteInterceptor
   class InterceptTarget
     include Comparable
@@ -9,12 +11,13 @@ module RouteInterceptor
     InferControllerMethod = InferHttpMethod.invert
     InferControllerMethod.default = 'show'
     
-    attr_reader :target, :injected_params
+    attr_reader :target, :add_params, :name
   
-    def initialize(target, http_method: nil, injected_params: nil)
+    def initialize(target, via: nil, name: nil, add_params: nil)
       @target = target.is_a?(Symbol) ? target : target.to_s
-      @http_method = http_method
-      @injected_params = injected_params || {}
+      @via = via
+      @add_params = add_params || {}
+      @name = name
     end
   
     def cam?
@@ -27,7 +30,7 @@ module RouteInterceptor
       elsif path?
         RouteInspector.cam_from_path(target.to_s)
       else
-        puts "Haven't figured out resource handling in this case yet. type: #{type}"
+        Rails.logger.error "Have not figured out resource handling in this case yet. target: #{target.to_s}"
       end
     end
   
@@ -44,34 +47,46 @@ module RouteInterceptor
     end
     
     def fake_request
-      @fake_request ||= FakeRequest.new(path, http_method)
+      @fake_request ||= FakeRequest.new(path, Array(via).first)
     end
   
-    def http_method
-      @http_method ||= (cam && InferHttpMethod[cam.split('#').last] || :get)
-    end
-  
-    def http_method=(method)
+    def target=(new_target)
+      @cam = nil
       @fake_request = nil
-      @http_method = method
+      @original_route = nil
+      @path = nil
+      @target = new_target
+    end
+
+    def via
+      @via ||= (cam && InferHttpMethod[cam.split('#').last] || :get)
+    end
+  
+    def via=(new_via)
+      @cam = nil
+      @fake_request = nil
+      @original_route = nil
+      @via = new_via
     end
     
-    def injected_params=(new_params)
-      if new_params.is_a?(Hash) && route
-        route.defaults.replace(original_defaults.merge(new_params).merge(route.defaults.slice(:controller, :action)))
+    def add_params=(new_params)
+      if new_params.is_a?(Hash)
+        @add_params = new_params
+        if route
+          route.defaults.replace(original_defaults.merge(new_params).merge(route.defaults.slice(:controller, :action)))
+        end
       end
     end
   
     def intercept!(target, request = nil, intercept_constraints: nil)
       target = self.class.new(target) unless target.is_a?(self.class)
       this = self
-  
       reroute(target.route, request) do
         if !this.cam
-          Rails.logger.error("Attempted to reroute #{target.http_method} #{target.dsl_path} to #{this.path} which does not exist.")
+          Rails.logger.error("Attempted to reroute #{target.via} #{target.dsl_path} to #{this.path} which does not exist.")
         else
-          Rails.logger.info "Rerouting #{target.http_method} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
-          send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.injected_params))
+          Rails.logger.info "Rerouting #{target.via} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
+          match(target.dsl_path, to: this.cam, via: Array(target.via).map(&:to_sym), constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.add_params), as: this.name)
         end
       end
     end
@@ -91,14 +106,15 @@ module RouteInterceptor
                 elsif cam?
                   RouteInspector.path_from_cam(cam)
                 else
-                  puts "resource hasn't been completed.  type: #{type}"
+                  Rails.logger.error "resource hasn't been completed.  type: #{type}"
+                  nil
                 end
     end
   
     def path?
       type == :path
     end
-  
+
     def remove_route!
       route.remove
     end
@@ -132,7 +148,7 @@ module RouteInterceptor
   
     def <=>(other)
       if other.is_a?(self.class)
-        (target <=> other.target).yield_self { |rc| rc == 0 ? http_method <=> other.http_method : rc }
+        (target <=> other.target).yield_self { |rc| rc == 0 ? via <=> other.via : rc }
       else
         nil
       end
@@ -148,16 +164,14 @@ module RouteInterceptor
     # end
   
     def reroute(existing_route, request = nil, &block)
-      inject =
-        if existing_route
-          :inject_before
-        elsif (existing_route = named_routes[:rails_info] || routes.first) # Look for our reprocess_request named route?
-          :inject_after
-        else
-          puts "No routes at all. Gonna crash until we do a direct routes draw"
-        end
-  
-      existing_route.send(inject, &block)
+      if existing_route
+        existing_route.inject_before(&block)
+      elsif (existing_route = named_routes[:rails_info] || routes.first) # Look for our reprocess_request named route?
+        existing_route.inject_after(&block)
+      else
+        Rails.logger.error "No routes at all. Gonna crash until we do a direct routes draw"
+      end
+
       reprocess_request(request) if request
     end
     

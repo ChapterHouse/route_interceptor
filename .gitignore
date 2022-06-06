@@ -1,7 +1,15 @@
+/.idea/
 /.bundle/
 /doc/
 /log/*.log
 /pkg/
+/spec/reports/
+/spec/internal/log/
+/target/
 /tmp/
 /test/dummy/log/*.log
 /test/dummy/tmp/
+/Gemfile.lock
+
+# rspec failure tracking
+.rspec_status
