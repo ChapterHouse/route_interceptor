@@ -1,4 +1,4 @@
-require_relative 'config_item'
+require_relative 'intercept_configuration'
 require_relative 'intercept_target'
 
 module RouteInterceptor
@@ -95,7 +95,7 @@ module RouteInterceptor
     def <=>(other)
       if other.is_a?(self.class)
         [:source, :destination, :http_method].inject(0) { |rc, x| rc == 0 ? send(x) <=> other.send(x) : rc }
-      elsif other.is_a?(ConfigItem)
+      elsif other.is_a?(InterceptConfiguration)
         rc = [:source, :destination].inject(0) { |rc, x| rc == 0 ? send(x).target <=> other.send(x) : rc }
         rc == 0 ? http_method <=> (other.http_method  || :get) : rc
       else

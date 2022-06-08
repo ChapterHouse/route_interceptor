@@ -1,21 +1,21 @@
 module RouteInterceptor
-  class ConfigItem
+  class InterceptConfiguration
   
     class << self
-  
-      class Configuration
-        methods = [:next_scheduled_update, :source, :source_changed, :update_schedule]
-        delegate *methods, to: ConfigItem
-        methods.map { |x| "#{x}=" }.each { |name| define_method(name) { |value| ConfigItem.send(name, value) } }
+
+      class EnvYaml
+        extend AppConfigFor
+        
+        def self.load(file_name)
+          self.config_directory = File.dirname(file_name)
+          self.config_name = File.basename(file_name, '.yml')
+          configured(true).deep_stringify_keys! rescue false
+        end
+
       end
-  
-      attr_reader :configuration
-  
-      def configure
-        @configuration ||= Configuration.new
-        yield(configuration)
-      end
-  
+      
+      delegate :configured, :config_file, :config_file?, to: RouteInterceptor
+      
       def fetch(auto_inject = true)
         if should_update?
           new_items = 
@@ -41,7 +41,7 @@ module RouteInterceptor
   
       def fetch_type
         case source
-        when String
+        when String, Pathname
           :file
         when URI
           :uri
@@ -61,13 +61,13 @@ module RouteInterceptor
       end
   
       def source_changed
-        @source_changed ||= Proc.new do
+        @source_changed ||= configured.source_changed || Proc.new do
           fetch_type == :file && source && File.exist?(source) && File.mtime(source) > last_update rescue false
         end
       end
   
       def source_changed?
-        source_changed.call
+        source_changed.call(last_update)
       end
       
       def schedule_next_update
@@ -90,7 +90,7 @@ module RouteInterceptor
       end
   
       def source
-        @source ||= 'config_items.yml'
+        @source ||= configured.intercepts || config_file? && config_file
       end
       
       def time_of_next_update
@@ -111,26 +111,32 @@ module RouteInterceptor
       
       def items_from_array(array)
         array = array.values.first if array.is_a?(Hash)
-        array = Array(array) unless array.respond_to?(:map)
-        array.map { |x| new(x['source'], x['destination'], x['injected_params'], x['http_method'], enabled: x.fetch('enabled', true)) }
+        array = Array(array) unless array.is_a?(Enumerable)
+        if array.all? { |x| x.is_a?(Hash) }
+          array.map { |x| new(x['source'], x['destination'], x['injected_params'], x['http_method'], enabled: x.fetch('enabled', true)) }
+        end
       end
   
       def items_from_json(json, show_errors = true)
-        items_from_array(JSON.parse(json)).tap { |x| puts "Loaded from JSON" if x }
+        items_from_array(JSON.parse(json))
       rescue JSON::ParserError => e
         Rails.logger.error "JSON syntax error occurred while parsing config items. Error: #{e.message}" if show_errors
         nil
       end
-  
+
       def items_from_yaml(yaml, show_errors = true)
-        items_from_array(YAML.load(yaml)).tap { |x| puts "Loaded from YAML" if x }
+        items_from_array(YAML.load(yaml))
       rescue Psych::SyntaxError => e
         Rails.logger.error "YAML syntax error occurred while parsing config items. Error: #{e.message}" if show_errors
         nil
       end
   
       def fetch_from_file
-        load_items(File.read(source))
+        if EnvYaml.load(source)
+          items_from_array(EnvYaml.configured.reroute)
+        else
+          load_items(File.read(source))
+        end
       rescue SystemCallError => e
         Rails.logger.error("Could not fetch configuration items from #{source}. Error: #{e.message}")
         nil

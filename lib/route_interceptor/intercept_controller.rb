@@ -2,7 +2,7 @@ module RouteInterceptor
   class InterceptController < ActionController::Base
     include RouteInspector
     def self.update_intercepts(request)
-      ConfigItem.fetch unless request.try(:fake?)
+      InterceptConfiguration.fetch unless request.try(:fake?)
     end
   
     def reprocess
