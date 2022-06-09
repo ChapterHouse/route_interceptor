@@ -86,7 +86,7 @@ module RouteInterceptor
   
     def stop_intercepting!
       if enabled?
-        puts "Disabling #{@destination} to #{@source.cam}"
+        Rails.logger.info "Disabling reroute of #{source.http_method} #{@source.path} to #{@destination.cam}"
         @enabled = false
         @source.remove_route!
       end

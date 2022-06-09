@@ -28,20 +28,12 @@ class ActionDispatch::Journey::Route
 
     route_set.disable_clear_and_finalize = true
 
-    routes.delete_at(index)
+    anchored_routes.delete(self)
+    custom_routes.delete(self)
+    routes.delete(self)
     named_routes.send(:routes).delete(name.to_sym) if name
-
-    index = Array(simulator.tt.memos.find { |_, routes| routes.include?(self) }).first
-    if index
-      memo = simulator.tt.memos[index]
-      memo.delete(self)
-      if memo.empty?
-        simulator.tt.memos.delete(index)
-        simulator.tt.instance_variable_get(:@accepting).delete(index)
-        # regexp_states and string_states?
-      end
-    end
-
+    journey_routes.send(:clear_cache!)
+    
     route_set.disable_clear_and_finalize = false
     route_set.finalize!
   end

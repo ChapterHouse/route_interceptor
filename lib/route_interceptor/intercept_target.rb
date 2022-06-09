@@ -65,13 +65,18 @@ module RouteInterceptor
     def intercept!(target, request = nil, intercept_constraints: nil)
       target = self.class.new(target) unless target.is_a?(self.class)
       this = self
-  
       reroute(target.route, request) do
         if !this.cam
           Rails.logger.error("Attempted to reroute #{target.http_method} #{target.dsl_path} to #{this.path} which does not exist.")
         else
           Rails.logger.info "Rerouting #{target.http_method} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
-          send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
+          a = target.http_method
+          b = target.dsl_path
+          c = this.cam
+          d = intercept_constraints || target.constraints
+          e = target.defaults.merge(this.params)
+          send(a, b, to: c, constraints: d, defaults: e)
+          # send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
         end
       end
     end
@@ -98,7 +103,7 @@ module RouteInterceptor
     def path?
       type == :path
     end
-  
+
     def remove_route!
       route.remove
     end

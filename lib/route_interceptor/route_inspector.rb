@@ -2,7 +2,15 @@ module RouteInterceptor
   module RouteInspector
   
     class << self
-  
+
+      def anchored_routes(engine = route_engine)
+        journey_routes(engine).anchored_routes
+      end
+
+      def custom_routes(engine = route_engine)
+        journey_routes(engine).custom_routes
+      end
+
       def engine_paths(engine = route_engine)
         engine_mounts(engine).transform_keys { |r| r.ast.to_s }
       end
@@ -96,10 +104,12 @@ module RouteInterceptor
         request.controller_instance.response.status = status
         request.controller_instance.response.headers.merge(headers)
       end
-  
+      
       def routes(engine = route_engine)
         journey_routes(engine).routes
       end
+      
+      # TODO: need access to custom_routes and anchored_routes
   
       def route_set(engine = route_engine)
         engine.routes
@@ -110,7 +120,15 @@ module RouteInterceptor
       end
   
     end
-  
+
+    def anchored_routes(engine = route_engine)
+      RouteInspector.anchored_routes(engine)
+    end
+
+    def custom_routes(engine = route_engine)
+      RouteInspector.custom_routes(engine)
+    end
+
     def cam_from_path(path, http_method = :get, engine = route_engine)
       RouteInspector(path, http_method, engine)
     end
