@@ -100,9 +100,13 @@ module RouteInterceptor
         rset = route_set(engine)
   
         status, headers, body =  rset.call(Rack::MockRequest.env_for(request.path[rset.find_script_name({}).size..-1], opts))
-        request.controller_instance.response_body = body
-        request.controller_instance.response.status = status
-        request.controller_instance.response.headers.merge(headers)
+        unless status == 404
+          request.controller_instance.response_body = body
+          request.controller_instance.response.status = status
+          request.controller_instance.response.headers.merge(headers)
+        else
+          raise ActionController::RoutingError, "No route matches [#{request.env['REQUEST_METHOD']}] #{request.env['PATH_INFO'].inspect}"
+        end
       end
       
       def routes(engine = route_engine)
