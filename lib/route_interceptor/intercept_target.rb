@@ -9,12 +9,12 @@ module RouteInterceptor
     InferControllerMethod = InferHttpMethod.invert
     InferControllerMethod.default = 'show'
     
-    attr_reader :target, :injected_params
+    attr_reader :target, :params
   
-    def initialize(target, http_method: nil, injected_params: nil)
+    def initialize(target, http_method: nil, params: nil)
       @target = target.is_a?(Symbol) ? target : target.to_s
       @http_method = http_method
-      @injected_params = injected_params || {}
+      @params = params || {}
     end
   
     def cam?
@@ -56,7 +56,7 @@ module RouteInterceptor
       @http_method = method
     end
     
-    def injected_params=(new_params)
+    def params=(new_params)
       if new_params.is_a?(Hash) && route
         route.defaults.replace(original_defaults.merge(new_params).merge(route.defaults.slice(:controller, :action)))
       end
@@ -71,7 +71,7 @@ module RouteInterceptor
           Rails.logger.error("Attempted to reroute #{target.http_method} #{target.dsl_path} to #{this.path} which does not exist.")
         else
           Rails.logger.info "Rerouting #{target.http_method} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
-          send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.injected_params))
+          send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
         end
       end
     end

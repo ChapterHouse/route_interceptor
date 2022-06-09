@@ -24,7 +24,7 @@ module RouteInterceptor
         existing = all.find { |ir| ir == config_item }
         if existing
           existing.desired_state = config_item.enabled
-          existing.injected_params = config_item.injected_params
+          existing.params = config_item.params
           existing.update! if auto_inject
           existing
         else
@@ -43,8 +43,8 @@ module RouteInterceptor
     attr_accessor :enabled, :desired_state
   
     def initialize(config_item, auto_inject = true)
-      @source = InterceptTarget.new(config_item.source, http_method: config_item.http_method, injected_params: config_item.injected_params)
-      @destination = InterceptTarget.new(config_item.destination, http_method: config_item.http_method, injected_params: config_item.injected_params)
+      @source = InterceptTarget.new(config_item.source, http_method: config_item.http_method, params: config_item.params)
+      @destination = InterceptTarget.new(config_item.destination, http_method: config_item.http_method, params: config_item.params)
       @desired_state = config_item.enabled
       puts "New intercept established: #{@source.cam || source.target} to #{@destination}"
       if auto_inject && @desired_state
@@ -59,8 +59,8 @@ module RouteInterceptor
       @enabled
     end
     
-    def injected_params=(new_params)
-      @source.injected_params = new_params
+    def params=(new_params)
+      @source.params = new_params
     end
   
     def update!

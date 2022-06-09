@@ -113,7 +113,7 @@ module RouteInterceptor
         array = array.values.first if array.is_a?(Hash)
         array = Array(array) unless array.is_a?(Enumerable)
         if array.all? { |x| x.is_a?(Hash) }
-          array.map { |x| new(x['source'], x['destination'], x['injected_params'], x['http_method'], enabled: x.fetch('enabled', true)) }
+          array.map { |x| new(x['source'], x['destination'], x['params'], x['http_method'], enabled: x.fetch('enabled', true)) }
         end
       end
   
@@ -133,7 +133,7 @@ module RouteInterceptor
   
       def fetch_from_file
         if EnvYaml.load(source)
-          items_from_array(EnvYaml.configured.reroute)
+          items_from_array(EnvYaml.configured.routes)
         else
           load_items(File.read(source))
         end
@@ -193,12 +193,12 @@ module RouteInterceptor
       end
     end
   
-    attr_reader :source, :destination, :injected_params, :http_method, :enabled
+    attr_reader :source, :destination, :params, :http_method, :enabled
   
-    def initialize(source, destination, injected_params = nil, http_method = nil, enabled: true)
+    def initialize(source, destination, params = nil, http_method = nil, enabled: true)
       @source = decode_target(source)
       @destination = decode_target(destination)
-      @injected_params = injected_params || {}
+      @params = params || {}
       @http_method = http_method
       @enabled = enabled
     end
