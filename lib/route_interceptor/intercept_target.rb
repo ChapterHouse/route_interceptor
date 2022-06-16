@@ -44,7 +44,7 @@ module RouteInterceptor
     end
     
     def fake_request
-      @fake_request ||= FakeRequest.new(path, http_method)
+      @fake_request ||= FakeRequest.new(path, Array(http_method).first)
     end
   
     def http_method
@@ -70,7 +70,8 @@ module RouteInterceptor
           Rails.logger.error("Attempted to reroute #{target.http_method} #{target.dsl_path} to #{this.path} which does not exist.")
         else
           Rails.logger.info "Rerouting #{target.http_method} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
-          send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
+          # send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
+          match(target.dsl_path, to: this.cam, via: target.http_method, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
         end
       end
     end
