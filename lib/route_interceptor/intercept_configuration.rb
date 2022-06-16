@@ -90,7 +90,7 @@ module RouteInterceptor
       end
   
       def source
-        @source ||= configured.intercepts || config_file? && config_file
+        @source ||= configured.route_source || config_file? && config_file
       end
       
       def time_of_next_update
@@ -177,17 +177,20 @@ module RouteInterceptor
       end
   
       def source=(new_source)
-        if new_source.is_a?(URI::Generic)
-          @source = new_source
-          @source = @source.path if new_source.is_a?(URI::File)
-        elsif new_source == Proc || new_source == Method
-          @source = new_source
-        else
-          new_source = URI(new_source.to_s)
-          if new_source.class < URI::Generic
-            self.source = new_source
+        if new_source.is_a?(URI::Generic)       # If this is any type of URI
+          if new_source.is_a?(URI::File)          # If it is a regular file location
+            @source = new_source.path               # Grab the path and be happy.
           else
-            @source = new_source.path
+            @source = new_source                  # Otherwise this a endpoint (HTTP, FTP, LDAP, etc) of some sort.
+          end
+        elsif new_source.is_a?(Proc) || new_source.is_a?(Method)
+          @source = new_source                    # Something is going to determine this dynamically once it is needed.
+        else                                    # No clue what this is.
+          new_source = URI(new_source.to_s)       # Convert to a URI via a string
+          if new_source.class < URI::Generic      # If the type of URI (HTTP, FILE, FTP, LDAP, etc) could be determined
+            self.source = new_source                # Send it back in for processing above
+          else                                    # Otherwise this is a completely generic thing.
+            @source = new_source.path               # Treat it as a URI::File even though it really isn't.
           end
         end
       end

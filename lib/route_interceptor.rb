@@ -6,12 +6,15 @@ module RouteInterceptor
   require_relative 'route_interceptor/intercept_configuration'
   
   class Configuration
+    # Pipe directly to the configuration as this DSL is used.
     methods = [:next_scheduled_update, :source, :source_changed, :update_schedule]
     delegate *methods, to: RouteInterceptor::InterceptConfiguration
-    # delegate *methods.map { |x| "#{x}=".to_sym }, to: RouteInterceptor::InterceptConfiguration
+    # Delegate can't delegate to private methods. So do this manually.
     methods.map { |x| "#{x}=" }.each { |name| define_method(name) { |value| InterceptConfiguration.send(name, value) } }
-    alias_method :intercepts, :source
-    alias_method :intercepts=, :source=
+
+    # Map the DSL command 'route_source' to the #source method on the InterceptConfiguration
+    alias_method :route_source, :source
+    alias_method :route_source=, :source=
     remove_method :source, :source=
   end
 
