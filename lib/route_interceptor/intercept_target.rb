@@ -9,12 +9,13 @@ module RouteInterceptor
     InferControllerMethod = InferHttpMethod.invert
     InferControllerMethod.default = 'show'
     
-    attr_reader :target, :params
+    attr_reader :target, :params, :name
   
-    def initialize(target, http_method: nil, params: nil)
+    def initialize(target, via: nil, name: nil, params: nil)
       @target = target.is_a?(Symbol) ? target : target.to_s
-      @http_method = http_method
+      @via = via
       @params = params || {}
+      @name = name
     end
   
     def cam?
@@ -44,16 +45,25 @@ module RouteInterceptor
     end
     
     def fake_request
-      @fake_request ||= FakeRequest.new(path, Array(http_method).first)
+      @fake_request ||= FakeRequest.new(path, Array(via).first)
     end
   
-    def http_method
-      @http_method ||= (cam && InferHttpMethod[cam.split('#').last] || :get)
-    end
-  
-    def http_method=(method)
+    def target=(new_target)
+      @cam = nil
       @fake_request = nil
-      @http_method = method
+      @original_route = nil
+      @target = new_target
+    end
+
+    def via
+      @via ||= (cam && InferHttpMethod[cam.split('#').last] || :get)
+    end
+  
+    def via=(new_via)
+      @cam = nil
+      @fake_request = nil
+      @original_route = nil
+      @via = new_via
     end
     
     def params=(new_params)
@@ -67,11 +77,10 @@ module RouteInterceptor
       this = self
       reroute(target.route, request) do
         if !this.cam
-          Rails.logger.error("Attempted to reroute #{target.http_method} #{target.dsl_path} to #{this.path} which does not exist.")
+          Rails.logger.error("Attempted to reroute #{target.via} #{target.dsl_path} to #{this.path} which does not exist.")
         else
-          Rails.logger.info "Rerouting #{target.http_method} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
-          # send(target.http_method, target.dsl_path, to: this.cam, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
-          match(target.dsl_path, to: this.cam, via: target.http_method, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params))
+          Rails.logger.info "Rerouting #{target.via} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
+          match(target.dsl_path, to: this.cam, via: target.via, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params), as: this.name)
         end
       end
     end
@@ -132,7 +141,7 @@ module RouteInterceptor
   
     def <=>(other)
       if other.is_a?(self.class)
-        (target <=> other.target).yield_self { |rc| rc == 0 ? http_method <=> other.http_method : rc }
+        (target <=> other.target).yield_self { |rc| rc == 0 ? via <=> other.via : rc }
       else
         nil
       end
