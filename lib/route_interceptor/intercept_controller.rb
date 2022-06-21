@@ -1,5 +1,7 @@
+require 'action_controller'
+
 module RouteInterceptor
-    class InterceptController < ActionController::Base
+    class InterceptController < ::ActionController::Base
 
     protect_from_forgery with: :null_session
     

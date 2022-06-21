@@ -1,3 +1,5 @@
+require 'rails'
+
 module RouteInterceptor
   module RouteInspector
   
@@ -178,7 +180,7 @@ module RouteInterceptor
     end
   
     def self.included(base)
-      if base.is_a?(Rails::Application) || base.is_a?(Rails::Engine)
+      if base.is_a?(::Rails::Application) || base.is_a?(::Rails::Engine)
         base.route_engine = self
       end
     end
