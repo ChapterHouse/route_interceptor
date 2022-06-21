@@ -80,7 +80,7 @@ module RouteInterceptor
           Rails.logger.error("Attempted to reroute #{target.via} #{target.dsl_path} to #{this.path} which does not exist.")
         else
           Rails.logger.info "Rerouting #{target.via} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
-          match(target.dsl_path, to: this.cam, via: target.via, constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params), as: this.name)
+          match(target.dsl_path, to: this.cam, via: Array(target.via).map(&:to_sym), constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params), as: this.name)
         end
       end
     end
