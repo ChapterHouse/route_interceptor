@@ -57,19 +57,68 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.last_update' do
+    let(:beginning_of_time) { Time.new(0)}
+    let(:time_now) { Time.now }
 
+    context 'when not set' do
+      before do
+        described_class.instance_variable_set(:@last_update, nil)
+      end
+      it 'returns beginning of time' do
+        expect(described_class.last_update).to eq(beginning_of_time)
+      end
+    end
+
+    it 'returns set time' do
+      described_class.instance_variable_set(:@last_update, time_now)
+      expect(described_class.last_update).to eq(time_now)
+    end
   end
 
   describe '.next_scheduled_update' do
+    let(:time_now) { Time.now }
+    it 'returns set scheduled update' do
+      described_class.instance_variable_set(:@next_scheduled_update, time_now)
+      expect(described_class.next_scheduled_update).to eq(time_now)
+    end
 
+    context 'when scheduled update not set' do
+      let(:next_update) { double }
+      it 'retrieves scheduled update from proc' do
+        described_class.instance_variable_set(:@next_scheduled_update, nil)
+        response = described_class.next_scheduled_update
+        expect(response).to be_a(Proc)
+        expect(described_class).to receive(:time_of_next_update).and_return(next_update)
+        expect(next_update).to receive(:next_quarter_hour)
+        expect { response.call }.not_to raise_error
+      end
+    end
   end
 
   describe '.source_changed' do
+    let(:beginning_of_time) { Time.new(0)}
+    let(:source_changes) { double }
 
+    it 'returns source has changed' do
+      Tempfile.create('foo') do |temp|
+        described_class.instance_variable_set(:@source, temp.path)
+        response = described_class.source_changed
+        expect(response.call).to be_truthy
+      end
+    end
   end
 
   describe '.source_changed?' do
-
+    # # TODO: was this expected?  private method `source_changed=' called for RouteInterceptor::InterceptConfiguration:Class
+    # let(:time_now) { Time.now }
+    # it 'validates' do
+    #   p = Proc.new do |last_update|
+    #     expect(last_update).to eq(time_now)
+    #     true
+    #   end
+    #   described_class.source_changed = p
+    #   expect(described_class.source_changed?).to be_truthy
+    # end
   end
 
   describe '.schedule_next_update' do
