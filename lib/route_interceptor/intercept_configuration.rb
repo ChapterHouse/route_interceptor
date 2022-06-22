@@ -32,7 +32,7 @@ module RouteInterceptor
               nil
             end
   
-          if new_items
+          if new_items && !new_items.empty?
             self.last_update = Time.now
             @items = new_items
             schedule_next_update

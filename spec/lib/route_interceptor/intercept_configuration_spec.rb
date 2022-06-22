@@ -4,7 +4,37 @@ describe RouteInterceptor::InterceptConfiguration do
   # TODO: how do we want to test EnvYaml???
 
   describe '.fetch' do
+    let(:item) { double }
+    let(:items) { [item] }
+    before :each do
+      expect(described_class).to receive(:should_update?).and_return(true)
+    end
 
+    %w{ file uri proc }.each do |type|
+      context "when type '#{type}'" do
+        context 'when items found' do
+          it "retrieves context from #{type}" do
+            expect(described_class).to receive(:fetch_type).and_return(type.to_sym)
+            expect(described_class).to receive("fetch_from_#{type}".to_sym).and_return(items)
+            expect(described_class).to receive(:schedule_next_update)
+            expect(item).to receive(:to_intercepted_route).with(true)
+            expect { described_class.fetch }.not_to raise_error
+          end
+        end
+
+        [nil, []].each do |items|
+          context "when items returns #{items.inspect}" do
+            it "does not retrieve context for #{type}" do
+              expect(described_class).to receive(:fetch_type).and_return(type.to_sym)
+              expect(described_class).to receive("fetch_from_#{type}".to_sym).and_return(items)
+              expect(described_class).not_to receive(:schedule_next_update)
+              expect { described_class.fetch }.not_to raise_error
+            end
+          end
+
+        end
+      end
+    end
   end
 
   describe '.fetch_type' do
