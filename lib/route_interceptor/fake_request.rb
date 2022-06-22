@@ -34,7 +34,9 @@ module RouteInterceptor
     end
   
     def route
-      find_route(self, route_engine) || path_from_cam(@path).tap { |cam_route| @path = cam_route.ast.to_s if cam_route }
+      find_route(self, route_engine) || path_from_cam(@path).tap do |cam_route|
+        @path = cam_route.ast.to_s if cam_route
+      end
     end
   end
 end
