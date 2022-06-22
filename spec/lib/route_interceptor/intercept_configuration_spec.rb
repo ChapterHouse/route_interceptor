@@ -38,7 +38,22 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.fetch_type' do
-
+    [
+      ["/some/file/location.yml", :file],
+      [Pathname.new('foo'), :file],
+      [URI.parse('http://foo.com'), :uri],
+      [Proc.new {}, :proc],
+      [described_class.method(:fetch_type), :proc],
+      [nil, nil]
+    ].each do |type|
+      object, source_type = type
+      context "when source type #{object.class}" do
+        it "returns type #{source_type.inspect}" do
+          expect(described_class).to receive(:source).and_return(object)
+          expect(described_class.fetch_type).to eq(source_type)
+        end
+      end
+    end
   end
 
   describe '.last_update' do
