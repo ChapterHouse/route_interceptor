@@ -6,11 +6,11 @@ describe RouteInterceptor::FakeRequest do
   let(:path) { '/foo' }
   let(:method) { 'get' }
   let(:engine) { nil }
+  let(:route) { double('ActionDispatch::Journey::Route', ast: '/trucks(.:format)', precedence: 5) }
 
   subject { described_class.new(path, method, engine) }
 
   describe '#initialize' do
-
     it 'creates an instance' do
       expect(subject.route_engine).not_to be_nil
       expect(subject.path).to eq('/foo')
@@ -32,8 +32,6 @@ describe RouteInterceptor::FakeRequest do
   end
 
   describe '#dsl_path' do
-    let(:route) { double('ActionDispatch::Journey::Route', ast: '/trucks(.:format)') }
-
     context 'when route ast not blank' do
       it 'removes the :format' do
         allow(subject).to receive(:route).and_return(route)
@@ -81,13 +79,26 @@ describe RouteInterceptor::FakeRequest do
   end
 
   it '#precedence' do
-    route = double
     expect(subject).to receive(:route).and_return(route)
     expect(route).to receive(:precedence)
     expect { subject.precedence }.not_to raise_error
   end
 
   describe '#route' do
+    context 'when existing route found' do
+      it 'returns existing route' do
+        expect(subject).to receive(:find_route).with(subject, any_args).and_return(route)
+        expect(subject.route).to eq(route)
+      end
+    end
 
+    context 'when existing route not found' do
+      it 'returns the path from the cam' do
+        # TODO: how do we want to test this???
+        expect(subject).to receive(:find_route).and_return(nil)
+        expect(subject).to receive(:path_from_cam).with(path)
+        subject.route
+      end
+    end
   end
 end
