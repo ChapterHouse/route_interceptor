@@ -288,15 +288,45 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.time_of_next_update' do
+    before :each do
+      described_class.instance_variable_set(:@time_of_next_update, nil)
+    end
 
+    it 'retrieves the last quarter hour' do
+      expect(Time).to receive(:now).and_return(time_now)
+      expect(time_now).to receive(:last_quarter_hour)
+      expect { described_class.time_of_next_update }.not_to raise_error
+    end
   end
 
   describe '.time_of_next_update=' do
+    around :each do |test|
+      described_class.instance_variable_set(:@time_of_next_update, nil)
+      test.run
+      described_class.instance_variable_set(:@time_of_next_update, nil)
+    end
 
+    it 'sets the next update' do
+      described_class.time_of_next_update = time_now
+      expect(described_class.instance_variable_get(:@time_of_next_update)).to eq(time_now)
+    end
   end
 
   describe '.update_schedule' do
+    before :each do
+      described_class.instance_variable_set(:@update_schedule, nil)
+    end
 
+    [
+      %i[uri scheduled],
+      %i[proc scheduled],
+      %i[other polling],
+    ].each do |fetch_type, schedule_type|
+      it "validates schedule for #{fetch_type} is #{schedule_type}" do
+        allow(described_class).to receive(:fetch_type).and_return(fetch_type)
+        expect(described_class.update_schedule).to eq(schedule_type)
+      end
+    end
   end
 
   describe '.items_from_array' do
