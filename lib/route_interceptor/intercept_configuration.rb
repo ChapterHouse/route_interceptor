@@ -87,7 +87,9 @@ module RouteInterceptor
       end
   
       def should_update?
+        # Scheduled updates not need to have their schedule checked because whe already know the time of the next update.
         schedule_next_update if update_schedule != :scheduled
+        # Are we there yet?
         Time.now >= time_of_next_update
       end
   

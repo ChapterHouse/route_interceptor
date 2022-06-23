@@ -96,18 +96,23 @@ describe RouteInterceptor::InterceptConfiguration do
 
   describe '.source_changed' do
     let(:beginning_of_time) { Time.new(0)}
-    let(:source_changes) { double }
+    let(:configured) { double }
+    let(:source) { double }
 
-    before do
+    before :each do
       described_class.instance_variable_set(:@source_changed, nil)
+      allow(described_class).to receive(:configured).and_return(configured)
+      allow(configured).to receive(:source_changed)
+      allow(described_class).to receive(:fetch_type).and_return(:file)
+      allow(described_class).to receive(:source).and_return(source)
+      allow(described_class).to receive(:last_update).and_return(Time.new(0))
+      allow(File).to receive(:exist?).with(source).and_return(true)
+      allow(File).to receive(:mtime).with(source).and_return(Time.now)
     end
 
     it 'returns source has changed' do
-      Tempfile.create('foo') do |temp|
-        described_class.instance_variable_set(:@source, temp.path)
-        response = described_class.source_changed
-        expect(response.call).to be_truthy
-      end
+      response = described_class.source_changed
+      expect(response.call).to be_truthy
     end
   end
 
@@ -198,7 +203,57 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.should_update?' do
+    before :each do
+      allow(described_class).to receive(:schedule_next_update)
+      allow(described_class).to receive(:update_schedule).and_return(:scheduled)
+      allow(described_class).to receive(:time_of_next_update).and_return(Time.new(0))
+    end
 
+    after :each do
+      described_class.should_update?
+    end
+
+    it 'checks the update schedule' do
+      expect(described_class).to receive(:update_schedule)
+    end
+
+    it 'is true if the time of the next update in the past' do
+      allow(described_class).to receive(:time_of_next_update).and_return(Time.new(0))
+      expect(described_class.should_update?).to be_truthy
+    end
+
+    it 'is false if the time of the next update in the future' do
+      allow(described_class).to receive(:time_of_next_update).and_return(1.day.from_now)
+      expect(described_class.should_update?).to be_falsey
+    end
+
+    context 'the update schedule is :scheduled' do
+      before :each do
+        allow(described_class).to receive(:update_schedule).and_return(:scheduled)
+      end
+
+      it 'schedules the next update' do
+        expect(described_class).not_to receive(:schedule_next_update)
+      end
+
+      it 'checks the time of the next update' do
+        expect(described_class).to receive(:time_of_next_update)
+      end
+    end
+
+    context 'the update schedule is not :scheduled' do
+      before :each do
+        allow(described_class).to receive(:update_schedule).and_return(:not_scheduled)
+      end
+
+      it 'does not schedule the next update' do
+        expect(described_class).to receive(:schedule_next_update)
+      end
+
+      it 'checks the time of next update' do
+        expect(described_class).to receive(:time_of_next_update)
+      end
+    end
   end
 
   describe '.source' do
