@@ -31,7 +31,6 @@ describe RouteInterceptor::InterceptConfiguration do
               expect { described_class.fetch }.not_to raise_error
             end
           end
-
         end
       end
     end
@@ -99,6 +98,10 @@ describe RouteInterceptor::InterceptConfiguration do
     let(:beginning_of_time) { Time.new(0)}
     let(:source_changes) { double }
 
+    before do
+      described_class.instance_variable_set(:@source_changed, nil)
+    end
+
     it 'returns source has changed' do
       Tempfile.create('foo') do |temp|
         described_class.instance_variable_set(:@source, temp.path)
@@ -109,16 +112,21 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.source_changed?' do
-    # # TODO: was this expected?  private method `source_changed=' called for RouteInterceptor::InterceptConfiguration:Class
-    # let(:time_now) { Time.now }
-    # it 'validates' do
-    #   p = Proc.new do |last_update|
-    #     expect(last_update).to eq(time_now)
-    #     true
-    #   end
-    #   described_class.source_changed = p
-    #   expect(described_class.source_changed?).to be_truthy
-    # end
+    let(:time_now) { Time.now }
+
+    before do
+      described_class.instance_variable_set(:@source_changed, nil)
+    end
+
+    it 'validates' do
+      p = Proc.new do |last_update|
+        expect(last_update).to eq(time_now)
+        true
+      end
+      described_class.send(:source_changed=, p)
+      expect(described_class).to receive(:last_update).and_return(time_now)
+      expect(described_class.source_changed?).to be_truthy
+    end
   end
 
   describe '.schedule_next_update' do

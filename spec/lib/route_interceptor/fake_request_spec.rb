@@ -95,10 +95,9 @@ describe RouteInterceptor::FakeRequest do
       let(:expected_path) { '/trucks' }
 
       it 'returns the path from the cam' do
-        # TODO: how do we want to test this???
-        # expect(subject).to receive(:find_route).and_return(nil)
-        # expect(subject).to receive(:path_from_cam).with(path).and_return(expected_path)
-        # subject.route
+        expect(subject).to receive(:find_route).and_return(nil)
+        expect(subject).to receive(:path_from_cam).with(path).and_return(expected_path)
+        expect { subject.route }.not_to raise_error
       end
     end
   end
