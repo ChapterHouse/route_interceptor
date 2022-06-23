@@ -3,6 +3,13 @@
 describe RouteInterceptor::InterceptConfiguration do
   # TODO: how do we want to test EnvYaml???
 
+  let(:beginning_of_time) { Time.new(0) }
+  let(:configured) { double }
+  let(:source) { double }
+  let(:not_now) { double('not_now') }
+  let(:time_now) { double('time_now') }
+
+
   describe '.fetch' do
     let(:item) { double }
     let(:items) { [item] }
@@ -56,9 +63,6 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.last_update' do
-    let(:beginning_of_time) { Time.new(0)}
-    let(:time_now) { Time.now }
-
     context 'when not set' do
       before do
         described_class.instance_variable_set(:@last_update, nil)
@@ -75,7 +79,6 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.next_scheduled_update' do
-    let(:time_now) { Time.now }
     it 'returns set scheduled update' do
       described_class.instance_variable_set(:@next_scheduled_update, time_now)
       expect(described_class.next_scheduled_update).to eq(time_now)
@@ -95,10 +98,6 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.source_changed' do
-    let(:beginning_of_time) { Time.new(0)}
-    let(:configured) { double }
-    let(:source) { double }
-
     before :each do
       described_class.instance_variable_set(:@source_changed, nil)
       allow(described_class).to receive(:configured).and_return(configured)
@@ -117,8 +116,6 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.source_changed?' do
-    let(:time_now) { Time.now }
-
     before do
       described_class.instance_variable_set(:@source_changed, nil)
     end
@@ -137,8 +134,6 @@ describe RouteInterceptor::InterceptConfiguration do
   describe '.schedule_next_update' do
     let(:time_scheduled) { double('time_scheduled') }
     let(:next_scheduled_update) { double('next_scheduled_update') }
-    let(:not_now) { double('not_now') }
-    let(:time_now) { double('time_now') }
 
     before :each do
       allow(described_class).to receive(:source).and_return(true)
@@ -257,7 +252,39 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.source' do
+    let(:configured) { double }
+    before :each do
+      described_class.instance_variable_set(:@source, nil)
+      allow(described_class).to receive(:configured).and_return(configured)
+      allow(configured).to receive(:route_source).and_return(nil)
+      allow(described_class).to receive(:config_file?).and_return(true)
+    end
 
+    after :each do
+      expect { described_class.source }.not_to raise_error
+    end
+
+    it 'calls to get configured route source' do
+      expect(configured).to receive(:route_source)
+    end
+
+    it 'checks for existence of a config file' do
+      allow(described_class).to receive(:config_file?)
+    end
+
+    context 'when config_file exists' do
+      it 'returns the config_file' do
+        allow(described_class).to receive(:config_file?).and_return(true)
+        expect(described_class).to receive(:config_file)
+      end
+    end
+
+    context 'when config_file does not exists' do
+      it 'returns the config_file' do
+        allow(described_class).to receive(:config_file?).and_return(false)
+        expect(described_class).not_to receive(:config_file)
+      end
+    end
   end
 
   describe '.time_of_next_update' do
