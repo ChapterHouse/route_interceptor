@@ -1,13 +1,15 @@
 require_relative 'route_inspector'
 
 module RouteInterceptor
+  # A simple request object that is impersonating an actual rails request to in order to resolve
+  # a route for a controller and method
   class FakeRequest
   
     include RouteInspector
   
     attr_accessor :path
     attr_accessor :method
-  
+
     def initialize(path, method, engine=nil)
       @path = path.to_s
       @method = method.to_s.to_sym
@@ -15,7 +17,7 @@ module RouteInterceptor
     end
   
     alias_method :path_info, :path
-  
+
     %i{ delete get head options link patch post put trace unlink }.each do |verb|
       define_method(verb.to_s + '?') { verb == @method }
     end

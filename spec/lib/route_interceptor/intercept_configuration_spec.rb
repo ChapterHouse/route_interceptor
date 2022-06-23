@@ -118,7 +118,7 @@ describe RouteInterceptor::InterceptConfiguration do
       described_class.instance_variable_set(:@source_changed, nil)
     end
 
-    it 'validates' do
+    it 'uses the supplied proc' do
       p = Proc.new do |last_update|
         expect(last_update).to eq(time_now)
         true
@@ -130,7 +130,71 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.schedule_next_update' do
+    let(:time_scheduled) { double('time_scheduled') }
+    let(:next_scheduled_update) { double('next_scheduled_update') }
+    let(:not_now) { double('not_now') }
+    let(:time_now) { double('time_now') }
 
+    before :each do
+      allow(described_class).to receive(:source).and_return(true)
+      allow(described_class).to receive(:update_schedule).and_return(:scheduled)
+      allow(described_class).to receive(:next_scheduled_update).and_return(next_scheduled_update)
+      allow(next_scheduled_update).to receive(:call).and_return(time_scheduled)
+      allow_any_instance_of(ActiveSupport::Duration).to receive(:from_now).and_return(not_now)
+    end
+
+    after :each do
+      described_class.schedule_next_update
+    end
+
+    it 'returns the next time to check for an update' do
+      expect(described_class).to receive(:time_of_next_update=).with(time_scheduled)
+    end
+
+    context 'source is not defined' do
+      it 'schedules the update for some indeterminate in the future' do
+        allow(described_class).to receive(:source).and_return(nil)
+        expect(described_class).to receive(:time_of_next_update=).with(not_now)
+      end
+    end
+
+    context 'update_schedule is :scheduled' do
+      before :each do
+        allow(described_class).to receive(:update_schedule).and_return(:scheduled)
+      end
+
+      it 'calls next_scheduled_update' do
+        expect(next_scheduled_update).to receive(:call)
+      end
+      it 'saves the result as the time_of_next_update' do
+        expect(described_class).to receive(:time_of_next_update=).with(time_scheduled)
+      end
+    end
+
+    context 'update_schedule is not :scheduled' do
+      before :each do
+        allow(described_class).to receive(:update_schedule).and_return(:not_scheduled)
+        allow(described_class).to receive(:source_changed?).and_return(false)
+      end
+
+      it 'calls source_changed?' do
+        expect(described_class).to receive(:source_changed?).and_return(false)
+      end
+
+      context 'when source has changed' do
+        it 'updates time_of_next_update to now' do
+          allow(described_class).to receive(:source_changed?).and_return(true)
+          expect(Time).to receive(:now).and_return(time_now)
+          expect(described_class).to receive(:time_of_next_update=).with(time_now)
+        end
+      end
+
+      context 'when source has not changed' do
+        it 'schedules the update for some indeterminate in the future' do
+          expect(described_class).to receive(:time_of_next_update=).with(not_now)
+        end
+      end
+    end
   end
 
   describe '.should_update?' do
