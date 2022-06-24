@@ -1,3 +1,5 @@
+require_relative 'route_inspector'
+
 module RouteInterceptor
   class InterceptTarget
     include Comparable

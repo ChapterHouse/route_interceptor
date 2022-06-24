@@ -1,14 +1,18 @@
 # frozen_string_literal: false
 
 describe RouteInterceptor::InterceptConfiguration do
-  # TODO: how do we want to test EnvYaml???
-
   let(:beginning_of_time) { Time.new(0) }
   let(:configured) { double }
   let(:source) { double('source') }
   let(:not_now) { double('not_now') }
   let(:time_now) { double('time_now') }
+  let(:destination) { double('destination') }
+  let(:via) { double('via') }
+  let(:params) { double('params') }
+  let(:name) { double('name') }
+  let(:enabled) { true }
 
+  subject { described_class.new(source, destination, params, via, name, enabled: enabled) }
 
   describe '.fetch' do
     let(:item) { double }
@@ -487,25 +491,72 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.load_items' do
+    after :each do
+      described_class.send(:load_items, data)
+    end
 
+    context 'when data responds to map' do
+      let(:data) { [] }
+
+      it 'calls items_from_array' do
+        expect(described_class).to receive(:items_from_array).with(data)
+      end
+    end
+
+    context 'when data does not respond to map' do
+      context 'when a yaml string' do
+        let(:data) { { foo: 'bar'}.to_yaml.to_s }
+
+        it 'calls items_from_yaml' do
+          expect(described_class).to receive(:items_from_yaml).with(data)
+        end
+      end
+
+      context 'when a json string' do
+        let(:data) { { foo: 'bar'}.to_json.to_s }
+
+        it 'calls items_from_json' do
+          expect(described_class).to receive(:items_from_json).with(data)
+        end
+      end
+
+      context 'when everything else' do
+        let(:data) { '  ' }
+
+        it 'calls through looking for a possible valid parsing of data' do
+          expect(described_class).to receive(:items_from_json).with(data, false)
+          expect(described_class).to receive(:items_from_yaml).with(data, false)
+        end
+      end
+    end
   end
 
   describe '.source=' do
-
-  end
-
-  describe '#initialize' do
-
+    # TODO:
   end
 
   describe '#to_intercepted_route' do
-
+    it 'calls to find or create an intercepted route' do
+      expect(RouteInterceptor::InterceptedRoute).to receive(:find_or_create).with(subject, true)
+      subject.to_intercepted_route
+    end
   end
 
   describe '#decode_target' do
+    let(:target_symbol) { :target_symbol }
+    let(:target_string) { 'target_string' }
+    let(:target_symbol_string) { ':target_symbol' }
 
+    it 'decodes the symbol target' do
+      expect(subject.send(:decode_target, target_symbol)).to eq(target_symbol)
+    end
+
+    it 'decodes the string symbol target' do
+      expect(subject.send(:decode_target, target_symbol_string)).to eq(target_symbol)
+    end
+
+    it 'decodes the string target' do
+      expect(subject.send(:decode_target, target_string)).to eq(target_string)
+    end
   end
-
-
-
 end

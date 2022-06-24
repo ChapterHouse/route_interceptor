@@ -1,5 +1,6 @@
 require 'active_support/core_ext/module/delegation'
 require_relative 'env_yaml'
+require_relative 'intercepted_route'
 
 module RouteInterceptor
   class InterceptConfiguration
@@ -209,6 +210,5 @@ module RouteInterceptor
     def decode_target(target)
       target.is_a?(Symbol) ? target : target.to_s.yield_self { |x| x.start_with?(':') ? x[1..-1].to_sym : x }
     end
-  
   end
 end
