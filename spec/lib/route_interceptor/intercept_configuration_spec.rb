@@ -5,7 +5,7 @@ describe RouteInterceptor::InterceptConfiguration do
 
   let(:beginning_of_time) { Time.new(0) }
   let(:configured) { double }
-  let(:source) { double }
+  let(:source) { double('source') }
   let(:not_now) { double('not_now') }
   let(:time_now) { double('time_now') }
 
@@ -441,7 +441,29 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.fetch_from_file' do
+    let(:configured) { double('configured') }
+    let(:routes) { double('routes') }
 
+    before :each do
+      allow(described_class).to receive(:source).and_return(source)
+      allow(RouteInterceptor::EnvYaml).to receive(:load).with(source).and_return(true)
+      allow(RouteInterceptor::EnvYaml).to receive(:configured).and_return(configured)
+      allow(configured).to receive(:routes).and_return(routes)
+    end
+
+    after :each do
+      described_class.send(:fetch_from_file)
+    end
+
+    it 'loads items from EnvYaml' do
+      expect(described_class).to receive(:items_from_array).with(routes)
+    end
+
+    it 'loads items from file' do
+      allow(RouteInterceptor::EnvYaml).to receive(:load).with(source).and_return(false)
+      expect(File).to receive(:read).with(source)
+      expect(described_class).to receive(:load_items)
+    end
   end
 
   describe '.fetch_from_proc' do
