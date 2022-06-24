@@ -123,15 +123,15 @@ module RouteInterceptor
   
       def items_from_json(json, show_errors = true)
         items_from_array(JSON.parse(json))
-      rescue JSON::ParserError => e
-        Rails.logger.error "JSON syntax error occurred while parsing config items. Error: #{e.message}" if show_errors
+      rescue JSON::ParserError => ex
+        Rails.logger.error message: "JSON syntax error occurred while parsing config items.", exception: ex if show_errors
         nil
       end
 
       def items_from_yaml(yaml, show_errors = true)
         items_from_array(YAML.load(yaml))
-      rescue Psych::SyntaxError => e
-        Rails.logger.error "YAML syntax error occurred while parsing config items. Error: #{e.message}" if show_errors
+      rescue Psych::SyntaxError => ex
+        Rails.logger.error "YAML syntax error occurred while parsing config items.", exception: ex if show_errors
         nil
       end
   

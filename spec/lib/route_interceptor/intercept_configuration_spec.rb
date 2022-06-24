@@ -51,8 +51,7 @@ describe RouteInterceptor::InterceptConfiguration do
       [Proc.new {}, :proc],
       [described_class.method(:fetch_type), :proc],
       [nil, nil]
-    ].each do |type|
-      object, source_type = type
+    ].each do |object, source_type|
       context "when source type #{object.class}" do
         it "returns type #{source_type.inspect}" do
           expect(described_class).to receive(:source).and_return(object)
@@ -330,6 +329,44 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.items_from_array' do
+    let(:item) {
+      {
+        source: 'source path',
+        destination: 'destination path',
+        params: 'additional params',
+        via: 'route match via',
+        name: 'route name identifier',
+        enabled: true
+      }.with_indifferent_access
+    }
+    let(:items) { [item] }
+
+    it 'creates a new intercept configuration instance from an array' do
+      expect(described_class).to receive(:new).with(
+        item[:source],
+        item[:destination],
+        item[:params],
+        item[:via],
+        item[:name],
+        enabled: item[:enabled]
+      )
+      described_class.send(:items_from_array, items)
+    end
+
+    it 'creates a new intercept configuration instance from a hash' do
+      expect(described_class).to receive(:new).with(
+        item[:source],
+        item[:destination],
+        item[:params],
+        item[:via],
+        item[:name],
+        enabled: item[:enabled]
+      )
+      described_class.send(:items_from_array, { data: items })
+    end
+
+    # TODO: What type of object example would not be a hash but also not enumerable to qualify for this duck typing??
+    # array = Array(array) unless array.is_a?(Enumerable)
 
   end
 
