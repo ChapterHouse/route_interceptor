@@ -467,7 +467,23 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.fetch_from_proc' do
+    before :each do
+      allow(described_class).to receive(:source).and_return(source)
+      allow(source).to receive(:call)
+    end
 
+    it 'calls load_items' do
+      expect(described_class).to receive(:load_items)
+      described_class.send(:fetch_from_proc)
+    end
+
+    context 'when raises error in proc execution' do
+      it 'logs an error and returns nil' do
+        allow(source).to receive(:call).and_raise('boom')
+        expect(Rails.logger).to receive(:error)
+        expect(described_class.send(:fetch_from_proc)).to be_nil
+      end
+    end
   end
 
   describe '.load_items' do
