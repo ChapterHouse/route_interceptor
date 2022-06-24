@@ -371,11 +371,73 @@ describe RouteInterceptor::InterceptConfiguration do
   end
 
   describe '.items_from_json' do
+    let(:json) { { foo: 'bar' }.to_json }
+    let(:show_errors) { true }
 
+    after :each do
+      described_class.send(:items_from_json, json, show_errors)
+    end
+
+    it 'calls items_from_array' do
+      expect(described_class).to receive(:items_from_array)
+    end
+
+    context 'when an error occurs' do
+      let(:json) { 'garbage' }
+
+      before :each do
+        expect(described_class).not_to receive(:items_from_array)
+      end
+
+      context 'show error' do
+        let(:show_errors) { true }
+        it 'logs a message' do
+          expect(Rails.logger).to receive(:error)
+        end
+      end
+
+      context 'do not show error' do
+        let(:show_errors) { false }
+        it 'does not log a message' do
+          expect(Rails.logger).not_to receive(:error)
+        end
+      end
+    end
   end
 
   describe '.items_from_yaml' do
+    let(:yaml) { { foo: 'bar' }.to_yaml }
+    let(:show_errors) { true }
 
+    after :each do
+      described_class.send(:items_from_yaml, yaml, show_errors)
+    end
+
+    it 'calls items_from_array' do
+      expect(described_class).to receive(:items_from_array)
+    end
+
+    context 'when an error occurs' do
+      let(:psych_error) { Psych::SyntaxError.new('file', 0, 0, 0, 'problem', 'context') }
+      before :each do
+        expect(described_class).not_to receive(:items_from_array)
+        allow(YAML).to receive(:load).with(any_args).and_raise(psych_error)
+      end
+
+      context 'show error' do
+        let(:show_errors) { true }
+        it 'logs a message' do
+          expect(Rails.logger).to receive(:error)
+        end
+      end
+
+      context 'do not show error' do
+        let(:show_errors) { false }
+        it 'does not log a message' do
+          expect(Rails.logger).not_to receive(:error)
+        end
+      end
+    end
   end
 
   describe '.fetch_from_file' do
