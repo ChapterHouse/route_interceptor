@@ -149,11 +149,48 @@ describe RouteInterceptor::InterceptTarget do
   end
 
   describe '#via' do
+    around :each do |test|
+      subject.instance_variable_set(:@via, nil)
+      test.call
+      subject.instance_variable_set(:@via, nil)
+    end
+
+    RouteInterceptor::InterceptTarget::InferHttpMethod.each do |key, value|
+      cam = "trucks##{key}"
+      context "when example cam is #{cam}" do
+        it "returns a via of #{value}" do
+          allow(subject).to receive(:cam).and_return(cam)
+          expect(subject.via).to eq(value)
+        end
+      end
+    end
+
+    it 'returns default get' do
+      allow(subject).to receive(:cam).and_return(nil)
+      expect(subject.via).to eq(:get)
+    end
 
   end
 
   describe '#via=' do
+    let(:new_via) { double('new via') }
+    before :each do
+      subject.instance_variable_set(:@cam, nil)
+      subject.instance_variable_set(:@fake_request, nil)
+      subject.instance_variable_set(:@original_route, nil)
+    end
 
+    %w[cam fake_request original_route].each do |arg|
+      instance_variable = "@#{arg}"
+      instance_variable_sym = "#{instance_variable}".to_sym
+      it "resets instance variable #{instance_variable} and sets new target" do
+        subject.instance_variable_set(instance_variable_sym, double)
+        expect(subject.instance_variable_get(instance_variable_sym)).not_to be_nil
+        subject.via = new_via
+        expect(subject.instance_variable_get(:@via)).to eq(new_via)
+        expect(subject.instance_variable_get(instance_variable_sym)).to be_nil
+      end
+    end
   end
 
   describe '#params=' do
