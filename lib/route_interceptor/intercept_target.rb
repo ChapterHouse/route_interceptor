@@ -30,7 +30,7 @@ module RouteInterceptor
       elsif path?
         RouteInspector.cam_from_path(target.to_s)
       else
-        puts "Haven't figured out resource handling in this case yet. type: #{type}"
+        Rails.logger.error "Have not figured out resource handling in this case yet. target: #{target.to_s}"
       end
     end
   
