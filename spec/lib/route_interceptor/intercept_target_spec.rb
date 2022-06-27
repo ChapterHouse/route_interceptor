@@ -1,6 +1,11 @@
 describe RouteInterceptor::InterceptTarget do
   let(:target) { double{'target'} }
   let(:route) { double('route') }
+  let(:fake_request) { double('fake_request') }
+
+  before :each do
+    allow(subject).to receive(:route).and_return(route)
+  end
 
   subject { described_class.new(target) }
 
@@ -53,7 +58,6 @@ describe RouteInterceptor::InterceptTarget do
   describe '#constraints' do
     let(:existing_constraints) { double }
     before :each do
-      allow(subject).to receive(:route).and_return(route)
       allow(route).to receive(:existing_constraints).and_return(existing_constraints)
     end
 
@@ -76,19 +80,72 @@ describe RouteInterceptor::InterceptTarget do
   end
 
   describe '#defaults' do
+    let(:sub_defaults) { { id: 123 } }
+    let(:defaults) do
+      { controller: 'cars', action: 'show'}.merge(sub_defaults)
+    end
+    before :each do
+      allow(route).to receive(:defaults).and_return(defaults)
+    end
 
+    it 'returns the default params for a route' do
+      expect(subject.defaults).to eq(sub_defaults)
+    end
+
+    it 'returns {} when route does not exist' do
+      allow(subject).to receive(:route).and_return(nil)
+      expect(subject.defaults).to eq({})
+    end
   end
 
   describe '#dsl_path' do
-
+    it 'pulls the dsl path from the fake request' do
+      expect(subject).to receive(:fake_request).and_return(fake_request)
+      expect(fake_request).to receive(:dsl_path)
+      subject.dsl_path
+    end
   end
 
   describe '#fake_request' do
+    let(:path) { double('path') }
+    let(:via) { double('via') }
 
+    around :each do |test|
+      subject.instance_variable_set(:@fake_request, nil)
+      test.call
+      subject.instance_variable_set(:@fake_request, nil)
+    end
+
+    before :each do
+      allow(subject).to receive(:path).and_return(path)
+      allow(subject).to receive(:via).and_return(via)
+      allow(RouteInterceptor::FakeRequest).to receive(:new).with(path, via).and_return(fake_request)
+    end
+
+    it 'returns a fake request object' do
+      expect(subject.fake_request).to eq(fake_request)
+    end
   end
 
   describe '#target=' do
+    let(:new_target) { double('new target') }
+    before :each do
+      subject.instance_variable_set(:@cam, nil)
+      subject.instance_variable_set(:@fake_request, nil)
+      subject.instance_variable_set(:@original_route, nil)
+    end
 
+    %w[cam fake_request original_route].each do |arg|
+      instance_variable = "@#{arg}"
+      instance_variable_sym = "#{instance_variable}".to_sym
+      it "resets instance variable #{instance_variable} and sets new target" do
+        subject.instance_variable_set(instance_variable_sym, double)
+        expect(subject.instance_variable_get(instance_variable_sym)).not_to be_nil
+        subject.target = new_target
+        expect(subject.instance_variable_get(:@target)).to eq(new_target)
+        expect(subject.instance_variable_get(instance_variable_sym)).to be_nil
+      end
+    end
   end
 
   describe '#via' do
