@@ -2,10 +2,7 @@ describe RouteInterceptor::InterceptTarget do
   let(:target) { double{'target'} }
   let(:route) { double('route') }
   let(:fake_request) { double('fake_request') }
-
-  before :each do
-    allow(subject).to receive(:route).and_return(route)
-  end
+  let(:cam) { double('cam') }
 
   subject { described_class.new(target) }
 
@@ -59,6 +56,7 @@ describe RouteInterceptor::InterceptTarget do
     let(:existing_constraints) { double }
     before :each do
       allow(route).to receive(:existing_constraints).and_return(existing_constraints)
+      allow(subject).to receive(:route).and_return(route)
     end
 
 
@@ -86,6 +84,7 @@ describe RouteInterceptor::InterceptTarget do
     end
     before :each do
       allow(route).to receive(:defaults).and_return(defaults)
+      allow(subject).to receive(:route).and_return(route)
     end
 
     it 'returns the default params for a route' do
@@ -194,35 +193,116 @@ describe RouteInterceptor::InterceptTarget do
   end
 
   describe '#params=' do
-
+    # TODO:
   end
 
   describe '#intercept!' do
-
+    # TODO:
   end
 
   describe '#original_defaults' do
+    let(:original_route) { double('original routes') }
+    let(:sub_defaults) { { id: 123 } }
+    let(:defaults) do
+      { controller: 'cars', action: 'show'}.merge(sub_defaults)
+    end
 
+    before :each do
+      allow(subject).to receive(:original_route).and_return(original_route)
+      allow(original_route).to receive(:defaults).and_return(defaults)
+    end
+
+    it 'returns the default params for a route' do
+      expect(subject.original_defaults).to eq(sub_defaults)
+    end
+
+    it 'returns {} when route does not exist' do
+      allow(subject).to receive(:original_route).and_return(nil)
+      expect(subject.original_defaults).to eq({})
+    end
   end
 
   describe '#original_route' do
-
+    it 'calls to the route' do
+      subject.instance_variable_set(:@original_route, nil)
+      expect(subject).to receive(:route)
+      subject.original_route
+    end
   end
 
   describe '#path' do
+    around :each do |test|
+      subject.instance_variable_set(:@path, nil)
+      test.call
+      subject.instance_variable_set(:@path, nil)
+    end
 
+    before :each do
+      allow(subject).to receive(:path?).and_return(false)
+      allow(subject).to receive(:cam?).and_return(false)
+    end
+
+    after :each do
+      subject.path
+    end
+
+    context 'when path' do
+      it 'pulls the path from the target' do
+        expect(subject).to receive(:path?).and_return(true)
+        expect(subject).to receive(:target)
+      end
+    end
+
+    context 'when cam' do
+      it 'pulls the path from the constructed cam' do
+        expect(subject).to receive(:cam?).and_return(true)
+        expect(subject).to receive(:cam).and_return(cam)
+        expect(RouteInterceptor::RouteInspector).to receive(:path_from_cam).with(cam)
+      end
+    end
+
+    it 'logs error that the requested type has not been completed/supported' do
+      # TODO: when type not supported, it say by default 'path', should we come up with something else?
+      expect(Rails.logger).to receive(:error).with(/resource hasn't been completed.  type: path/)
+    end
   end
 
   describe '#path?' do
-
+    [[:path, true], [:anything_else, false]].each do |type, response|
+      it "returns #{response} when type is #{type}" do
+        expect(subject).to receive(:type).and_return(type)
+        expect(subject.path?).to eq(response)
+      end
+    end
   end
 
   describe '#remove_route!' do
+    before :each do
+      allow(subject).to receive(:route).and_return(route)
+    end
 
+    it 'calls to remove on current route' do
+      expect(route).to receive(:remove)
+      subject.remove_route!
+    end
   end
 
   describe '#route' do
+    around :each do |test|
+      subject.instance_variable_set(:@original_route, nil)
+      test.call
+      subject.instance_variable_set(:@original_route, nil)
+    end
 
+    before :each do
+      allow(subject).to receive(:fake_request).and_return(fake_request)
+      allow(fake_request).to receive(:route).and_return(route)
+    end
+
+    it 'calls to retrieve the route from fake request' do
+      subject.route
+      expect(subject.instance_variable_get(:@original_route)).to eq(route)
+    end
   end
 
   describe '#resource?' do
