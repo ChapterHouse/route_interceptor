@@ -306,7 +306,12 @@ describe RouteInterceptor::InterceptTarget do
   end
 
   describe '#resource?' do
-
+    [[:resource, true], [:anything_else, false]].each do |type, response|
+      it "returns #{response} when type is #{type}" do
+        expect(subject).to receive(:type).and_return(type)
+        expect(subject.resource?).to eq(response)
+      end
+    end
   end
 
   describe '#to_s' do
