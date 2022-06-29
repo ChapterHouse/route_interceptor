@@ -18,7 +18,7 @@ module RouteInterceptor
       end
   
       def engine_mounts(engine = route_engine)
-        journey_routes(engine).routes.select { |r| r.app.app.is_a?(Class) }.map { |r| [r, r.app.app] }.to_h
+        routes(engine).select { |r| r.app.app.is_a?(Class) }.map { |r| [r, r.app.app] }.to_h
       end
   
       def mounted_engines(engine = route_engine)
