@@ -159,16 +159,14 @@ module RouteInterceptor
     # end
   
     def reroute(existing_route, request = nil, &block)
-      inject =
-        if existing_route
-          :inject_before
-        elsif (existing_route = named_routes[:rails_info] || routes.first) # Look for our reprocess_request named route?
-          :inject_after
-        else
-          Rails.logger.error "No routes at all. Gonna crash until we do a direct routes draw"
-        end
-  
-      existing_route.send(inject, &block)
+      if existing_route
+        existing_route.inject_before(&block)
+      elsif (existing_route = named_routes[:rails_info] || routes.first) # Look for our reprocess_request named route?
+        existing_route.inject_after(&block)
+      else
+        Rails.logger.error "No routes at all. Gonna crash until we do a direct routes draw"
+      end
+
       reprocess_request(request) if request
     end
     

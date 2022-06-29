@@ -1,10 +1,13 @@
 describe RouteInterceptor::InterceptTarget do
-  let(:target) { double{'target'} }
+  let(:route_target) { double{'target'} }
   let(:route) { double('route') }
   let(:fake_request) { double('fake_request') }
   let(:cam) { double('cam') }
 
-  subject(:new_intercept_target) { described_class.new(target) }
+  let(:foo) { double{'what_to_intercept'} }
+  let(:target) { RouteInterceptor::InterceptTarget.new(foo) }
+  
+  subject(:new_intercept_target) { described_class.new(route_target) }
 
   describe '#cam?' do
     [[:cam, true], [:anything_else, false]].each do |type, response|
@@ -16,6 +19,13 @@ describe RouteInterceptor::InterceptTarget do
   end
 
   describe '#cam' do
+    it 'calls to_s on the original value sent in' do
+      allow(foo).to receive(:to_s).and_return(foo)
+      allow(target).to receive(:cam?).and_return(true)
+      expect(foo).to receive(:to_s)
+      target.cam
+    end
+
     around :each do |test|
       subject.instance_variable_set(:@cam, nil)
       test.run
@@ -340,59 +350,74 @@ describe RouteInterceptor::InterceptTarget do
   end
 
   describe '#reroute' do
-    let(:existing_route) { double('existing route') }
+    let(:existing_route) { double('existing_route') }
+    let(:named_routes) { double('named_routes') }
+    let(:routes) { double('routes') }
     let(:request) { double('request') }
-
-    subject(:reroute_subject) { new_intercept_target.send(:reroute, existing_route, request) {} }
-
-    after :each do
-      reroute_subject
-    end
-
+    
     before :each do
-      allow(existing_route).to receive(:send)
-      allow(new_intercept_target).to receive(:reprocess_request)
+      allow(existing_route).to receive(:inject_before)
+      allow(existing_route).to receive(:inject_after)
+      allow(target).to receive(:reprocess_request)
+      allow(named_routes).to receive(:[])
+      allow(routes).to receive(:first).and_return(existing_route)
+      allow(target).to receive(:named_routes).and_return(named_routes)
+      allow(target).to receive(:routes).and_return(routes)
     end
 
-    context 'when existing route' do
-      let(:existing_route) { double('ActionDispatch::Journey::Route') }
+    context 'we have an existing route' do
 
-      it 'injects before' do
-        expect(existing_route). to receive(:send).with(:inject_before, any_args)
-        expect(new_intercept_target).to receive(:reprocess_request).with(request)
+      it 'uses inject_before if we have an existing route' do
+        expect(existing_route).to receive(:inject_before)
+        target.send(:reroute, existing_route)
       end
+
+      it 'passes the given block to the injector' do
+        allow(existing_route).to receive(:inject_before) { |&block| expect(block).to_not be_nil }
+        target.send(:reroute, existing_route) {}
+      end
+
+    end
+    
+    context 'we do not have an existing route' do
+
+      it 'looks for the named route :rails_info' do
+        expect(named_routes).to receive(:[]).with(:rails_info)
+        target.send(:reroute, nil)
+      end
+
+      it 'takes the first available route if the :rails_info route cannot be found' do
+        expect(routes).to receive(:first)
+        target.send(:reroute, nil)
+      end
+
+      it 'does not ask for the first route if the :rails_info route was found' do
+        allow(named_routes).to receive(:[]).and_return(existing_route)
+        expect(routes).to_not receive(:first)
+        target.send(:reroute, nil)
+      end
+
+      it 'uses inject_after if we do have an existing route' do
+        expect(existing_route).to receive(:inject_after)
+        target.send(:reroute, nil)
+      end
+
+      it 'passes the given block to the injector' do
+        allow(existing_route).to receive(:inject_after) { |&block| expect(block).to_not be_nil }
+        target.send(:reroute, nil) {}
+      end
+
+    end
+    
+    it 'reprocesses the request if one is given' do
+      expect(target).to receive(:reprocess_request).with(request)
+      target.send(:reroute, existing_route, request)    
     end
 
-    context 'when no existing route' do
-      let(:existing_route) { nil }
-      let(:first_route) { double('ActionDispatch::Journey::Route') }
-      let(:routes) { [first_route] }
-
-      before :each do
-        allow(new_intercept_target).to receive(:named_routes).and_return({})
-        allow(new_intercept_target).to receive(:routes).and_return(routes)
-      end
-
-      it 'injects after' do
-        # TODO: getting WARNING: An expectation of `:send` was set on `nil`. To allow expectations on `nil` and suppress this message, set `RSpec::Mocks.configuration.allow_message_expectations_on_nil` to `true`. To disallow expectations on `nil`, set `RSpec::Mocks.configuration.allow_message_expectations_on_nil` to `false`. Called from /Users/gh7199/poloka/route_interceptor/spec/lib/route_interceptor/intercept_target_spec.rb:349:in `block (3 levels) in <top (required)>'.
-        expect(first_route). to receive(:send).with(:inject_after, any_args)
-        expect(new_intercept_target).to receive(:reprocess_request).with(request)
-      end
+    it 'does not try to reprocess a non existnt request' do
+      expect(target).to_not receive(:reprocess_request).with(request)
+      target.send(:reroute, existing_route)
     end
 
-    context 'when no existing route, no named_routes and no routes' do
-      let(:existing_route) { nil }
-      let(:routes) { [] }
-
-      before :each do
-        allow(new_intercept_target).to receive(:named_routes).and_return({})
-        allow(new_intercept_target).to receive(:routes).and_return(routes)
-      end
-
-      it 'logs an error and expects to blow chunks' do
-        # TODO: do we want to handle this case differently???
-        expect(Rails.logger).to receive(:error).with(/No routes/)
-      end
-    end
   end
 end
