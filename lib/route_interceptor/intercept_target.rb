@@ -103,6 +103,7 @@ module RouteInterceptor
                   RouteInspector.path_from_cam(cam)
                 else
                   Rails.logger.error "resource hasn't been completed.  type: #{type}"
+                  nil
                 end
     end
   
