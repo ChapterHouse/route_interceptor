@@ -165,7 +165,7 @@ module RouteInterceptor
         elsif (existing_route = named_routes[:rails_info] || routes.first) # Look for our reprocess_request named route?
           :inject_after
         else
-          puts "No routes at all. Gonna crash until we do a direct routes draw"
+          Rails.logger.error "No routes at all. Gonna crash until we do a direct routes draw"
         end
   
       existing_route.send(inject, &block)
