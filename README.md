@@ -5,7 +5,7 @@
 Ruby gem providing the ability to intercept existing `ActionDispatch::Journey::Route`s and direct to another
 known path or controller and method (aka cam).
 
-## Usage
+## Configuration
 Configurations for source to destination intercepting is supported for the following scenarios:
 
 | Source       | Destination | Supported? |
@@ -22,7 +22,8 @@ Configurations for source to destination intercepting is supported for the follo
 identify the controller and method*
 
 ### Structure of Configuration
-The following is a yaml interpretation of the configuration but its function is to demonstrate
+The following is a yaml interpretation of the configuration but its function is to demonstrate what the object loaded by
+either the file or proc should represent to the interceptor.
 
 ```yaml
 routes:
@@ -39,15 +40,44 @@ routes:
 | destination   | The `destination` must be a **<u>known</u>** endpoint with one of the following options:<br/><li>path, example(s): `/notifications`</li><li>cam, example(s): `notifications#index`</li>                                       |
 | via           | The `via` is the [http verb][http_verbs] utilized in the creation of the [match method][http_verb_constraints] construction. As noted within the documentation, this may be an array of values including the option of `:all` |
 | param_mapping | The `param_mapping` provides the ability to both map existing incoming parameters to new parameters as well as inject new ones.                                                                                               |
-| name          | The `name` <TODO>                                                                                                                                                                                                             |
+| name          | The `name` is something...                                                                                                                                                                                                    |
 
+
+### Load Configuration
 Configurations supported for determining the intercepting combinations are retrieved in one of the following methods
-* File (config/route_interceptor.yml)
+* File
 * Proc
 
-### File Configuration
+By default, the sequence in the loading of the interception configurations utilizes the file configuration option.  Updates
+to the yaml file on the file system will trigger an update to the intercept configuration for your application.
 
-### Proc Configuration
+If you want to change from the file to proc based data retrieval, you may simply configure the interceptor to load from a proc.
+You perform this by adding a `route_interceptor.rb` initializer within your `/config/initializers` with the following
+configuration:
+```ruby
+RouteInterceptor.configure do |config|
+  config.route_source = proc {
+    { routes: [] }
+  }
+end
+```
+Now the frequency of checking for updates in this configuration will be on a scheduled interval of every 15 minutes
+on the quarter hour. You may also force the check regardless of the source type to be scheduled by simply adding it
+to the configuration as follows:
+```ruby
+RouteInterceptor.configure do |config|
+  config.update_schedule = :scheduled
+  config.route_source = proc {
+    { routes: [] }
+  }
+end
+```
+
+#### File Configuration
+The file configuration in the interceptor utilizes the [app_config_for][app_config_for] library to load
+a `route_interceptor.yml` file from the `/config` folder of the consuming rails application.  
+
+#### Proc Configuration
 
 
 ## Development
@@ -114,3 +144,4 @@ follow the [code of conduct][9].
 [9]: ./CODE_OF_CONDUCT.md
 [http_verbs]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 [http_verb_constraints]: https://guides.rubyonrails.org/routing.html#http-verb-constraints
+[app_config_for]: https://github.com/ChapterHouse/app_config_for
