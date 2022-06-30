@@ -26,9 +26,20 @@ The following is a yaml interpretation of the configuration but its function is 
 
 ```yaml
 routes:
-- source: cars#index
-  destination: trucks#index
+- source:
+  destination:
+  via: []
+  param_mapping: {}
+  name:
 ```
+
+| column        | description                                                                                                                                                                                                                   |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| source        | The `source` can be one of the following options:<br/><li>path, example(s): `/notifications`</li><li>cam, example(s): `notifications#index`</li>                                                                              |
+| destination   | The `destination` must be a **<u>known</u>** endpoint with one of the following options:<br/><li>path, example(s): `/notifications`</li><li>cam, example(s): `notifications#index`</li>                                       |
+| via           | The `via` is the [http verb][http_verbs] utilized in the creation of the [match method][http_verb_constraints] construction. As noted within the documentation, this may be an array of values including the option of `:all` |
+| param_mapping | The `param_mapping` provides the ability to both map existing incoming parameters to new parameters as well as inject new ones.                                                                                               |
+| name          | The `name` <TODO>                                                                                                                                                                                                             |
 
 Configurations supported for determining the intercepting combinations are retrieved in one of the following methods
 * File (config/route_interceptor.yml)
@@ -43,9 +54,7 @@ Configurations supported for determining the intercepting combinations are retri
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests.
 You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version,
-update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag
-for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+To install this gem onto your local machine, run `bundle exec rake install`.
 
 ## Releasing
 To release a new version, update the version number in the `version.rb`. Then, by selecting to create a
@@ -103,3 +112,5 @@ follow the [code of conduct][9].
 [7]: https://help.github.com/articles/using-pull-requests
 [8]: ./CONTRIBUTORS.md
 [9]: ./CODE_OF_CONDUCT.md
+[http_verbs]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+[http_verb_constraints]: https://guides.rubyonrails.org/routing.html#http-verb-constraints
