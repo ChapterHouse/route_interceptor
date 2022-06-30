@@ -3,33 +3,17 @@ require_relative '../route_generator'
 
 describe RouteInterceptor::RouteInspector do
   
-  let(:klass) { Class.new.tap { |klass| klass.include(RouteInterceptor::RouteInspector) } }
-
   context 'class methods' do
     
     let(:inspector) { RouteInterceptor::RouteInspector }
-    # let(:engine_routes) { instance_double(ActionDispatch::Routing::RouteSet) }
-    # let(:rails_routes) { instance_double(ActionDispatch::Routing::RouteSet) }
-
-    # let(:anchored_routes) { journey_routes.anchored_routes }
-    # let(:app) { Rails.application }
-    # let(:journey_routes) { route_set.set }
-    # let(:named_routes) { route_set.named_routes }
-    # let(:routes) { journey_routes.routes }
 
     let(:app) { Rails.application }
     let(:route_engine) { app }
     let(:route_set) { app.routes }
     let(:journey_routes) { route_set.set }
 
-
-    ActionDispatch::Journey::Routes
-    number_of_routes = 3
-    number_of_engines = 2
-    
-    create_standard_routes(number_of_routes)
-    create_test_engines(number_of_engines)
-
+    create_standard_routes(3)
+    create_test_engines(2)
 
     let(:test_route_set) { ActionDispatch::Routing::RouteSet.new }
     let(:test_routes) { standard_routes.zip(engine_routes).flatten.compact }
@@ -89,7 +73,7 @@ describe RouteInterceptor::RouteInspector do
       end
 
     end
-
+    
     describe '.find_route' do
 
       it 'finds the route matching the path string' do
@@ -131,6 +115,38 @@ describe RouteInterceptor::RouteInspector do
       
       it 'locates a string path from a cam' do
         expect(inspector.path_from_cam(cam1)).to eql(path1)
+      end
+      
+    end
+
+    describe '.reprocess_request' do
+    
+      let(:env) { {foo: :bar, 'RAW_POST_DATA' => 'Sure Why Not'} }
+      let(:params) { {param1: 'FooBar', controller: controller1, action: method1} }
+      let(:request) { RouteInterceptor::FakeRequest.new(path1, :get, params: params, env: env) }
+      
+      it 'resends the request back through the router to be served by the current controller handling the path' do
+        inspector.reprocess_request(request)
+        expect(request.controller_instance.response_body).to eql(body1)
+      end
+      
+      it 'uses the correct path and request options during reprocessing' do
+        opts = env.merge({method: :get, input: env['RAW_POST_DATA']}, params: params.except(:controller, :action))
+        original_request_keys = %w(action_dispatch.request.path_parameters action_controller.instance action_dispatch.request.content_type 
+                                  action_dispatch.request.request_parameters action_dispatch.request.query_parameters action_dispatch.request.parameters 
+                                  action_dispatch.request.formats)
+        request.env.merge!(original_request_keys.zip(original_request_keys).to_h)
+        expect(Rack::MockRequest).to receive(:env_for).with(path1, opts).and_call_original
+
+        inspector.reprocess_request(request)
+      end
+      
+      it 'raises a RoutingError on detection of a 404 to trigger normal rails processing (especially in local development mode)' do
+        request.path = '/not_gonna_find_it'
+        request.env.merge!({'REQUEST_METHOD' => request.method.to_s.upcase, 'PATH_INFO' => request.path})
+        error_klass = ActionController::RoutingError
+        error_message = "No route matches [#{request.env['REQUEST_METHOD']}] #{request.env['PATH_INFO'].inspect}"
+        expect { inspector.reprocess_request(request) }.to raise_error(error_klass, error_message)
       end
       
     end
@@ -184,9 +200,136 @@ describe RouteInterceptor::RouteInspector do
       end
 
     end
-
     
   end
 
+  context 'instance_methods' do
 
+    # let(:app) { Rails.application }
+
+    create_standard_routes(3)
+    create_test_engines(2)
+
+    instance_methods = %i(anchored_routes custom_routes engine_mounts engine_paths journey_routes mounted_engines named_routes routes route_set simulator)
+
+    inspector = RouteInterceptor::RouteInspector
+    let(:klass) { Class.new.tap { |c| c.include(inspector) } }
+    let(:instance) { klass.new }
+
+    let(:test_route_set) { ActionDispatch::Routing::RouteSet.new }
+    let(:test_routes) { standard_routes.zip(engine_routes).flatten.compact }
+
+    before :each do
+      test_routes.each do |route|
+        test_route_set.set.routes << route
+        test_route_set.set.partition_route(route)
+        test_route_set.set.send(:clear_cache!)
+      end
+
+      allow(engine1).to receive(:routes).and_return(test_route_set)
+      allow(engine2).to receive(:routes).and_return(test_route_set)
+      instance.instance_variable_set(:@route_engine, engine1)
+    end
+
+    instance_methods.each do |im|
+  
+      describe "##{im}" do
+        
+        it "relays to #{inspector}.#{im} using the locally defined engine" do
+          expect(inspector).to receive(im).with(engine1).and_call_original
+          expect(engine1).to receive(:routes)
+          instance.send(im)
+        end
+
+        it "relays to #{inspector}.#{im} using the given engine" do
+          expect(engine2).to receive(:routes)
+          instance.send(im, engine2)
+        end
+
+      end
+
+    end
+
+    describe "#cam_from_path" do
+
+      it "relays to #{inspector}.cam_from_path using the locally defined engine" do
+        expect(inspector).to receive(:cam_from_path).with(path1, :get, engine1).and_call_original
+        expect(engine1).to receive(:routes)
+        instance.cam_from_path(path1, :get)
+      end
+
+      it "relays to #{inspector}.cam_from_path using the given engine" do
+        expect(engine2).to receive(:routes)
+        instance.cam_from_path(path1, :get, engine2)
+      end
+
+    end
+
+    describe "#find_route" do
+
+      it "relays to #{inspector}.find_route using the locally defined engine" do
+        expect(inspector).to receive(:find_route).with(path1, engine1).and_call_original
+        expect(engine1).to receive(:routes)
+        instance.find_route(path1)
+      end
+
+      it "relays to #{inspector}.find_route using the given engine" do
+        expect(engine2).to receive(:routes)
+        instance.find_route(path1, engine2)
+      end
+
+    end
+
+    describe "#path_from_cam" do
+
+      it "relays to #{inspector}.path_from_cam using the locally defined engine" do
+        expect(inspector).to receive(:path_from_cam).with(cam1, engine1).and_call_original
+        expect(engine1).to receive(:routes)
+        instance.path_from_cam(cam1)
+      end
+
+      it "relays to #{inspector}.path_from_cam using the given engine" do
+        expect(engine2).to receive(:routes)
+        instance.path_from_cam(cam1, engine2)
+      end
+
+    end
+
+    describe "#reprocess_request" do
+
+      it "relays to #{inspector}.reprocess_request using the locally defined engine" do
+        request = RouteInterceptor::FakeRequest.new(path1, :get)
+        expect(inspector).to receive(:reprocess_request).with(request, engine1).and_call_original
+        expect(engine1).to receive(:routes)
+        instance.reprocess_request(request)
+      end
+
+      it "relays to #{inspector}.reprocess_request using the given engine" do
+        request = RouteInterceptor::FakeRequest.new(path1, :get)
+        expect(engine2).to receive(:routes)
+        instance.reprocess_request(request, engine2)
+      end
+
+    end
+
+    describe '.route_engine' do
+
+      it 'defaults to the Rails.application' do
+        instance.instance_variable_set(:@route_engine, nil)
+        expect(instance.route_engine).to eql(Rails.application)
+      end
+
+    end
+
+    describe '.route_engine=' do
+
+      it 'sets the new default engine to inspect with' do
+        instance.route_engine = engine1
+        expect(instance.route_engine).to eql(engine1)
+      end
+
+    end
+
+  end
+  
 end

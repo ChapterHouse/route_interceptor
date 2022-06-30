@@ -1,8 +1,13 @@
 def standard_route(id, name: nil, prefix: nil, dispatcher: nil)
   id = id.to_s
 
+  headers = {}
+  status_code = 200
+  body = "#{prefix}body_#{id}"
+  strategy = Proc.new {  [status_code, headers, body] }
+
   dispatcher ||= ActionDispatch::Routing::RouteSet::Dispatcher.new(false)
-  constraints = ActionDispatch::Routing::Mapper::Constraints.new(dispatcher, [], nil)
+  constraints = ActionDispatch::Routing::Mapper::Constraints.new(dispatcher, [], strategy)
 
   slash = ActionDispatch::Journey::Nodes::Slash.new('/')
   literal = ActionDispatch::Journey::Nodes::Literal.new("#{prefix}path_" + id)
@@ -25,6 +30,7 @@ def standard_route(id, name: nil, prefix: nil, dispatcher: nil)
   parts[:controller] = controller
   parts[:method] = method
   parts[:cam] = [controller, method].join('#')
+  parts[:body] = body
   parts[:route] = route
   parts[:path] = route.path.spec.to_s
 

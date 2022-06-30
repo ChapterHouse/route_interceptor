@@ -1,23 +1,61 @@
 require_relative 'route_inspector'
 
 module RouteInterceptor
+
+  class FakeResponse
+    
+    attr_accessor :status, :headers, :body
+
+    def initialize(status = 0, headers = {}, body = '')
+      @status = status
+      @headers = headers
+      @body = body
+    end
+      
+  end
+  
+  class FakeController
+
+    attr_accessor :response
+    
+    def initialize(response = nil)
+      @response = FakeResponse.new
+    end
+
+    def response_body
+      @response.body
+    end
+
+    def response_body=(new_body)
+      @response.body = new_body
+    end
+
+  end
+
+
   # A simple request object that is impersonating an actual rails request to in order to resolve
   # a route for a controller and method
   class FakeRequest
-  
+
     include RouteInspector
   
     attr_accessor :path
     attr_accessor :method
-
+    attr_accessor :env
+    attr_accessor :params
+    attr_accessor :controller_instance
+    
     # Creates an instance of the FakeRequest to be utilized with the assistance of identifying
     # existing routes within the route set
     #
     # @param [String|Symbol] path The path or controller and method (aka cam) to search
     # @param [String|Symbol] method The http method verb
-    def initialize(path, method, engine=nil)
+    def initialize(path, method, engine=nil, env: {}, params: {}, controller_instance: nil)
       @path = path.to_s
       @method = method.to_s.to_sym
+      @env = env
+      @params = params
+      @controller_instance ||= FakeController.new
       self.route_engine = engine if engine
     end
   

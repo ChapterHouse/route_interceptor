@@ -138,9 +138,17 @@ module RouteInterceptor
     end
 
     def cam_from_path(path, http_method = :get, engine = route_engine)
-      RouteInspector(path, http_method, engine)
+      RouteInspector.cam_from_path(path, http_method, engine)
     end
-  
+
+    def engine_mounts(engine = route_engine)
+      RouteInspector.engine_mounts(engine)
+    end
+
+    def engine_paths(engine = route_engine)
+      RouteInspector.engine_paths(engine)
+    end
+
     def find_route(request, engine = route_engine)
       RouteInspector.find_route(request, engine)
     end
@@ -148,7 +156,11 @@ module RouteInterceptor
     def journey_routes(engine = route_engine)
       RouteInspector.journey_routes(engine)
     end
-  
+
+    def mounted_engines(engine = route_engine)
+      RouteInspector.mounted_engines(engine)
+    end
+    
     def named_routes(engine = route_engine)
       RouteInspector.named_routes(engine)
     end
