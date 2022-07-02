@@ -19,7 +19,7 @@ module RouteInterceptor
     attr_accessor :response
     
     def initialize(response = nil)
-      @response = FakeResponse.new
+      @response = response || FakeResponse.new
     end
 
     def response_body
@@ -55,7 +55,7 @@ module RouteInterceptor
       @method = method.to_s.to_sym
       @env = env
       @params = params
-      @controller_instance ||= FakeController.new
+      @controller_instance = controller_instance || FakeController.new
       self.route_engine = engine if engine
     end
   

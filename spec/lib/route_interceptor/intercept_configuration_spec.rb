@@ -8,11 +8,11 @@ describe RouteInterceptor::InterceptConfiguration do
   let(:time_now) { double('time_now') }
   let(:destination) { double('destination') }
   let(:via) { double('via') }
-  let(:params) { double('params') }
+  let(:add_params) { double('add_params') }
   let(:name) { double('name') }
   let(:enabled) { true }
 
-  subject { described_class.new(source, destination, params, via, name, enabled: enabled) }
+  subject { described_class.new(source, destination, add_params: add_params, via: via, name: name, enabled: enabled) }
 
   describe '.fetch' do
     let(:item) { double }
@@ -349,9 +349,9 @@ describe RouteInterceptor::InterceptConfiguration do
       expect(described_class).to receive(:new).with(
         item[:source],
         item[:destination],
-        item[:params],
-        item[:via],
-        item[:name],
+        add_params: item[:add_params],
+        via: item[:via],
+        name: item[:name],
         enabled: item[:enabled]
       )
       described_class.send(:items_from_array, items)
@@ -361,9 +361,9 @@ describe RouteInterceptor::InterceptConfiguration do
       expect(described_class).to receive(:new).with(
         item[:source],
         item[:destination],
-        item[:params],
-        item[:via],
-        item[:name],
+        add_params: item[:add_params],
+        via: item[:via],
+        name: item[:name],
         enabled: item[:enabled]
       )
       described_class.send(:items_from_array, { data: items })

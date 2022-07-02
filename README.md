@@ -8,22 +8,28 @@ known path or controller and method (aka cam).
 ## Configuration
 Configurations for source to destination intercepting is supported for the following scenarios:
 
-| Source       | Destination | Supported? |
-|--------------|-------------|------------|
-| path exists  | path exists | yes        |
-| path missing | path exists | yes        |
-| path exists  | cam exists  | yes        |
-| path missing | cam exists  | yes        |
-| cam exists   | path exists | yes        |
-| cam exists   | cam exists  | yes        |
-| cam missing  | n/a         | no         |
+|  Source route<br/> exists?  | Source <br/>specified as | Destination<sup>1</sup> |   Supported?   |
+|:---------------------------:|:------------------------:|:-----------------------:|:--------------:|
+|             yes             |     path<sup>3</sup>     |          path           |      yes       |
+|             yes             |           path           |           cam           |      yes       |
+|             yes             |      cam<sup>4</sup>     |          path           |      yes       |
+|             yes             |           cam            |           cam           |      yes       |
+|             no              |           path           |          path           |      yes       |
+|             no              |           path           |           cam           |      yes       |
+|             no              |           cam            |        path/cam         | no<sup>2</sup> |
 
-*Controller and method (cam) has an implicit requirement that the searching for an existing route has to be able to
-identify the controller and method*
+<sup>1</sup>The destination route must exist. Apparently HR says routing to /dev/null is a violation of something or other.... blah blah blah.
+
+<sup>2</sup>The source can be specified as a cam only if the path can be determined by looking at the existing routes. If it isn't there we don't
+know where to route from. Tried /dev/random. Received HR visit #2.
+
+<sup>3</sup> path - standard routes path, ie: /cars
+
+<sup>4</sup> cam - Controller and Method. ie: cars#index
 
 ### Structure of Configuration
 The following is a yaml interpretation of the configuration but its function is to demonstrate what the object loaded by
-either the file or proc should represent to the interceptor.
+either the file or proc should represent to the interceptor. The equivalent can also be done via json as a personal preference.
 
 ```yaml
 routes:
@@ -34,23 +40,32 @@ routes:
   name:
 ```
 
-| column        | description                                                                                                                                                                                                                   |
-|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| source        | The `source` can be one of the following options:<br/><li>path, example(s): `/notifications`</li><li>cam, example(s): `notifications#index`</li>                                                                              |
-| destination   | The `destination` must be a **<u>known</u>** endpoint with one of the following options:<br/><li>path, example(s): `/notifications`</li><li>cam, example(s): `notifications#index`</li>                                       |
-| via           | The `via` is the [http verb][http_verbs] utilized in the creation of the [match method][http_verb_constraints] construction. As noted within the documentation, this may be an array of values including the option of `:all` |
-| param_mapping | The `param_mapping` provides the ability to both map existing incoming parameters to new parameters as well as inject new ones.                                                                                               |
-| name          | The `name` is something...                                                                                                                                                                                                    |
+| column      | description                                                                                                                                                                                                                                     |
+|-------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| source      | The `source` can be one of the following options:<br/><li>path, example(s): `/notifications`</li><li>cam, example(s): `notifications#index`</li>                                                                                                |
+| destination | The `destination` must be a **<u>known</u>** endpoint with one of the following options:<br/><li>path, example(s): `/notifications`</li><li>cam, example(s): `notifications#index`</li>                                                         |
+| via         | The `via` is the [http verb][http_verbs] utilized in the creation of the [match method][http_verb_constraints] construction. As noted within the documentation, this may be an array of values including the option of `:all`                   |
+| add_params  | The `add_params` provides the ability inject new parameters into the incoming request.                                                                                                                                                          |
+| name        | The `name` is an optional value that can be used to identifiy a route interception. This value must be given if the source, destination, or via are to be updated at runtime without rebooting. `add_params` can always be dynamically updated. |
 
 
 ### Load Configuration
-Configurations supported for determining the intercepting combinations are retrieved in one of the following methods
+Configurations supported for determining the intercepting combinations are retrieved in one of the following methods:
 * File
-* Proc
+* Initializer
+* Url*
 
-By default, the sequence in the loading of the interception configurations utilizes the file configuration option.  Updates
+**Url is a forth coming enhancement that will allow a retrieval from a configured url endpoint. For now this can be accomplished manually via a proc.*
+
+#### File Configuration
+The file configuration in the interceptor utilizes the [app_config_for][app_config_for] library to load
+a `route_interceptor.yml` file from the `/config` folder of the consuming rails application.
+
+By default, the sequence in the loading of the interception configurations utilizes the file configuration mode. Updates
 to the yaml file on the file system will trigger an update to the intercept configuration for your application.
 
+
+#### Rails initializer
 If you want to change from the file to proc based data retrieval, you may simply configure the interceptor to load from a proc.
 You perform this by adding a `route_interceptor.rb` initializer within your `/config/initializers` with the following
 configuration:
@@ -68,16 +83,40 @@ to the configuration as follows:
 RouteInterceptor.configure do |config|
   config.update_schedule = :scheduled
   config.route_source = proc {
-    { routes: [] }
+    { routes: [] } # Could also do a http retrieval here if desired.
   }
 end
 ```
 
-#### File Configuration
-The file configuration in the interceptor utilizes the [app_config_for][app_config_for] library to load
-a `route_interceptor.yml` file from the `/config` folder of the consuming rails application.  
+Schedule at a semi regular update interval by returning the time of the next scheduled update.
+```ruby
+RouteInterceptor.configure do |config|
+  config.update_schedule = :scheduled
+  # Update every five minutes, but take a one hour lunch break.
+  config.next_scheduled_update = proc { Time.hour == 12 ? 1.hour.from_now : 5.minutes.from now }
+  config.route_source = proc {
+    { routes: [] } # Could also do a http retrieval here if desired.
+  }
+end
+```
 
-#### Proc Configuration
+
+Change to a more highly controlled determination of when to look for new changes. Return true or false if things have changed and need to be reread.
+```ruby
+RouteInterceptor.configure do |config|
+  config.update_schedule = :polling
+  # With the polling option we will signify an update during every other second unless it is 7am. 7am updates all the time. What a try hard.
+  # Just return true or false to signify that things have changed and should be reread.
+  config.source_changed = proc { |last_updated| Time.now.second.odd? || last_updated.hour == 7}
+  config.route_source = proc {
+    { routes: [] } # Could also do a http retrieval here if desired.
+  }
+end
+```
+
+
+
+
 
 
 ## Development

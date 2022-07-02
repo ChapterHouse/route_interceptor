@@ -163,7 +163,7 @@ module RouteInterceptor
       elsif other.is_a?(InterceptConfiguration)
         if name || other.name
           # If either has a name we can compare that way
-          name && other.name && name <=> other.name || name && 1 ||  -1
+          name && other.name && name <=> other.name || name && 1 || -1
         else
           # Otherwise we fall back on looking for equality between the targets and the via (http methods)
           rc = [:source, :destination].inject(0) { |rc, x| rc == 0 ? send(x).target <=> other.send(x) : rc }
@@ -176,3 +176,5 @@ module RouteInterceptor
     
   end
 end
+
+

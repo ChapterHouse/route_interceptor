@@ -107,7 +107,7 @@ module RouteInterceptor
         array = array.values.first if array.is_a?(Hash)
         array = Array(array) unless array.is_a?(Enumerable)
         if array.all? { |x| x.is_a?(Hash) }
-          array.map { |x| new(x['source'], x['destination'], x['params'], x['via'], x['name'], enabled: x.fetch('enabled', true)) }
+          array.map { |x| new(x['source'], x['destination'], add_params: x['add_params'], via: x['via'], name: x['name'], enabled: x.fetch('enabled', true)) }
         end
       end
   
@@ -190,12 +190,12 @@ module RouteInterceptor
       end
     end
   
-    attr_reader :source, :destination, :params, :via, :name, :enabled
+    attr_reader :source, :destination, :add_params, :via, :name, :enabled
   
-    def initialize(source, destination, params = nil, via = nil, name = nil, enabled: true)
+    def initialize(source, destination, add_params: nil, via: nil, name: nil, enabled: true)
       @source = decode_target(source)
       @destination = decode_target(destination)
-      @params = params || {}
+      @add_params = add_params || {}
       @via = via
       @name = name
       @enabled = enabled
