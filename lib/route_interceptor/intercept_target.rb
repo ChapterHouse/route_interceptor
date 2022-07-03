@@ -11,12 +11,12 @@ module RouteInterceptor
     InferControllerMethod = InferHttpMethod.invert
     InferControllerMethod.default = 'show'
     
-    attr_reader :target, :params, :name
+    attr_reader :target, :add_params, :name
   
-    def initialize(target, via: nil, name: nil, params: nil)
+    def initialize(target, via: nil, name: nil, add_params: nil)
       @target = target.is_a?(Symbol) ? target : target.to_s
       @via = via
-      @params = params || {}
+      @add_params = add_params || {}
       @name = name
     end
   
@@ -68,7 +68,7 @@ module RouteInterceptor
       @via = new_via
     end
     
-    def params=(new_params)
+    def add_params=(new_params)
       if new_params.is_a?(Hash) && route
         route.defaults.replace(original_defaults.merge(new_params).merge(route.defaults.slice(:controller, :action)))
       end
@@ -82,7 +82,7 @@ module RouteInterceptor
           Rails.logger.error("Attempted to reroute #{target.via} #{target.dsl_path} to #{this.path} which does not exist.")
         else
           Rails.logger.info "Rerouting #{target.via} #{target.dsl_path} to #{this.cam}" #" #{existing_constraints.inspect}"
-          match(target.dsl_path, to: this.cam, via: Array(target.via).map(&:to_sym), constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.params), as: this.name)
+          match(target.dsl_path, to: this.cam, via: Array(target.via).map(&:to_sym), constraints: intercept_constraints || target.constraints, defaults: target.defaults.merge(this.add_params), as: this.name)
         end
       end
     end

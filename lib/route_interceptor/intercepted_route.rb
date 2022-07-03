@@ -24,7 +24,7 @@ module RouteInterceptor
         existing = all.find { |ir| ir == config_item }
         if existing
           # TODO: Working here on live updates. Testing on params first.
-          existing.params = config_item.params
+          existing.add_params = config_item.add_params
           existing.via = config_item.via
           existing.source = config_item.source
           existing.destination = config_item.destination
@@ -47,8 +47,8 @@ module RouteInterceptor
     attr_reader :source, :destination
     
     def initialize(config_item, auto_inject = true)
-      @source = InterceptTarget.new(config_item.source, via: config_item.via, name: config_item.name, params: config_item.params)
-      @destination = InterceptTarget.new(config_item.destination, via: config_item.via, name: config_item.name, params: config_item.params)
+      @source = InterceptTarget.new(config_item.source, via: config_item.via, name: config_item.name, add_params: config_item.add_params)
+      @destination = InterceptTarget.new(config_item.destination, via: config_item.via, name: config_item.name, add_params: config_item.add_params)
       @should_be_enabled = config_item.enabled
       puts "New intercept established: #{@source.cam || source.target} to #{@destination}"
       if auto_inject && should_be_enabled?
@@ -92,15 +92,15 @@ module RouteInterceptor
       @source.name
     end
 
-    def params
-      @source.params
+    def add_params
+      @source.add_params
     end
     
-    def params=(new_params)
+    def add_params=(new_params)
       # Cannot update if we are active but are not a named route. We would not be able to find this route again if we did.
       if updateable?
         @updated = true
-        @source.params = new_params
+        @source.add_params = new_params
       end
     end
     
