@@ -132,43 +132,12 @@ the [Continuous Delivery](https://github.com/ChapterHouse/route_interceptor/acti
 GitHub Action will build and then release the artifact to [rubygems.org](https://rubygems.org).
 
 ## Contributing
-Help us to make this project better by contributing. Whether it's new features, bug fixes, or simply improving documentation,
-your contributions are welcome. Please start with logging a [github issue][1] or submit a pull request.
-
-Before you contribute, please review these guidelines to help ensure a smooth process for everyone.
-
-Thanks!!
-
-### Issue Reporting
-
-* Please browse our [existing issues][1] before logging new issues.
-* Check that the issue has not already been fixed in the `master` branch.
-* Open an issue with a descriptive title and a summary.
-* Please be as clear and explicit as you can in your description of the problem.
-* Please state the version of {technical dependencies} and `route_inspector` you are using in the description.
-* Include any relevant code in the issue summary.
-
-### Pull Requests
-
-* Read [how to properly contribute to open source projects on Github][2].
-* Fork the project.
-* Use a feature branch.
-* Write [good commit messages][3].
-* Use the same coding conventions as the rest of the project.
-* Commit locally and push to your fork until you are happy with your contribution.
-* Make sure to add tests and verify all the tests are passing when merging upstream.
-* Add an entry to the [Changelog][4] accordingly.
-* Please add your name to the [CONTRIBUTORS.md][8] file. Adding your name to the [CONTRIBUTORS.md][8] file signifies agreement to all rights and reservations provided by the [License][5].
-* [Squash related commits together][6].
-* Open a [pull request][7].
-* The pull request will be reviewed by the community and merged by the project committers.
+See [Contribution Guide](https://github.com/ChapterHouse/route_interceptor/wiki/Contribution-Guide)
 
 ## License
-
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
 
 ## Code of Conduct
-
 Everyone interacting in the RouteInterceptor project's codebases, issue trackers, chat rooms and mailing lists is expected to
 follow the [code of conduct][9].
 
