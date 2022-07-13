@@ -36,7 +36,7 @@ routes:
 - source:
   destination:
   via: []
-  param_mapping: {}
+  add_params: {}
   name:
 ```
 
