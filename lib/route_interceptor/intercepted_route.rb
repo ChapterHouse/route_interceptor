@@ -101,6 +101,7 @@ module RouteInterceptor
       if updateable?
         @updated = true
         @source.add_params = new_params
+        @destination.add_params = new_params
       end
     end
     

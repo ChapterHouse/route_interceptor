@@ -54,6 +54,7 @@ module RouteInterceptor
       @cam = nil
       @fake_request = nil
       @original_route = nil
+      @path = nil
       @target = new_target
     end
 
@@ -69,8 +70,11 @@ module RouteInterceptor
     end
     
     def add_params=(new_params)
-      if new_params.is_a?(Hash) && route
-        route.defaults.replace(original_defaults.merge(new_params).merge(route.defaults.slice(:controller, :action)))
+      if new_params.is_a?(Hash)
+        @add_params = new_params
+        if route
+          route.defaults.replace(original_defaults.merge(new_params).merge(route.defaults.slice(:controller, :action)))
+        end
       end
     end
   
