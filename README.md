@@ -93,7 +93,7 @@ Schedule at a semi regular update interval by returning the time of the next sch
 RouteInterceptor.configure do |config|
   config.update_schedule = :scheduled
   # Update every five minutes, but take a one hour lunch break.
-  config.next_scheduled_update = proc { Time.hour == 12 ? 1.hour.from_now : 5.minutes.from now }
+  config.next_scheduled_update = proc { Time.hour == 12 ? 1.hour.from_now : 5.minutes.from_now }
   config.route_source = proc {
     { routes: [] } # Could also do a http retrieval here if desired.
   }
