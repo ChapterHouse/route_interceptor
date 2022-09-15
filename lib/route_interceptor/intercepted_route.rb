@@ -50,7 +50,7 @@ module RouteInterceptor
       @source = InterceptTarget.new(config_item.source, via: config_item.via, name: config_item.name, add_params: config_item.add_params)
       @destination = InterceptTarget.new(config_item.destination, via: config_item.via, name: config_item.name, add_params: config_item.add_params)
       @should_be_enabled = config_item.enabled
-      puts "New intercept established: #{@source.cam || source.target} to #{@destination}"
+      Rails.logger.info "New intercept established: #{@source.cam || source.target} to #{@destination}"
       if auto_inject && should_be_enabled?
         intercept!
       else
