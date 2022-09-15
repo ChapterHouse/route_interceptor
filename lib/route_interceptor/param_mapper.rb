@@ -1,3 +1,4 @@
+# Just tossed this here for future use maybe. Or maybe just to delete later. This is a early release after all.
 def param_mapper(params={})
   mapper = params[:param_mapper]
 
